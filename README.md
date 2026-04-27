@@ -7,12 +7,12 @@
 A gateway that connects any [A2A protocol](https://google.github.io/A2A/) agent to Slack, WhatsApp, Google Chat, Email, Telegram, and Discord. You build the agent, the gateway handles the channels.
 
 ```
-    Slack ──┐                        ┌── Your A2A Agent
- WhatsApp ──┤                        │   (ADK, LangGraph,
-   G Chat ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…)
-    Email ──┤                        │
- Telegram ──┤                        │
-  Discord ──┘                        └──
+    Slack ──┐                        ┌─────────────────────┐
+ WhatsApp ──┤                        │   Your A2A Agent    │
+   G Chat ──┼──▶  a2a-gateway  ──A2A─┤   (ADK, LangGraph,  │
+    Email ──┤                        │    CrewAI, custom…) │
+ Telegram ──┤                        └─────────────────────┘
+  Discord ──┘
 ```
 
 Adding a channel is mostly just setting env vars. The gateway takes care of message chunking, rate limiting, retries, debouncing, typing indicators, streaming responses, and per-channel markdown formatting. Everything is opt-in: if you don't configure a feature, it doesn't run.
