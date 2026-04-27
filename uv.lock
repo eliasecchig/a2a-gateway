@@ -14,27 +14,23 @@ source = { virtual = "." }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
     { name = "aiosmtpd" },
+    { name = "discord-py" },
     { name = "fastapi" },
     { name = "google-adk", extra = ["a2a"] },
     { name = "google-api-python-client" },
     { name = "google-auth" },
     { name = "httpx" },
+    { name = "python-telegram-bot" },
     { name = "pyyaml" },
     { name = "slack-bolt" },
     { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
-discord = [
-    { name = "discord-py" },
-]
 lint = [
     { name = "codespell" },
     { name = "ruff" },
     { name = "ty" },
-]
-telegram = [
-    { name = "python-telegram-bot" },
 ]
 
 [package.dev-dependencies]
@@ -50,20 +46,20 @@ requires-dist = [
     { name = "a2a-sdk", extras = ["http-server"], specifier = "==0.3.26" },
     { name = "aiosmtpd", specifier = ">=1.4" },
     { name = "codespell", marker = "extra == 'lint'", specifier = ">=2.3" },
-    { name = "discord-py", marker = "extra == 'discord'", specifier = ">=2.4" },
+    { name = "discord-py", specifier = ">=2.4" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "google-adk", extras = ["a2a"], specifier = ">=1.0" },
     { name = "google-api-python-client", specifier = ">=2.160" },
     { name = "google-auth", specifier = ">=2.38" },
     { name = "httpx", specifier = ">=0.28" },
-    { name = "python-telegram-bot", marker = "extra == 'telegram'", specifier = ">=21" },
+    { name = "python-telegram-bot", specifier = ">=21" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.11" },
     { name = "slack-bolt", specifier = ">=1.21" },
     { name = "ty", marker = "extra == 'lint'", specifier = ">=0.0.1a7" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]
-provides-extras = ["telegram", "discord", "lint"]
+provides-extras = ["lint"]
 
 [package.metadata.requires-dev]
 dev = [

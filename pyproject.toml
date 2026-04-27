@@ -1,7 +1,7 @@
 [project]
 name = "a2a-gateway"
 version = "0.1.0"
-description = "Multi-channel A2A gateway — connect Slack, WhatsApp, Google Chat, and Email to any A2A-compliant agent"
+description = "Multi-channel A2A gateway — connect Slack, WhatsApp, Google Chat, Email, Telegram, and Discord to any A2A-compliant agent"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
@@ -27,6 +27,8 @@ dependencies = [
     "pyyaml>=6.0",
     "google-adk[a2a]>=1.0",
     "a2a-sdk[http-server]==0.3.26",
+    "python-telegram-bot>=21",
+    "discord.py>=2.4",
 ]
 
 [project.urls]
@@ -38,8 +40,6 @@ Issues = "https://github.com/eliasecchig/a2a-gateway/issues"
 a2a-gateway = "run:main"
 
 [project.optional-dependencies]
-telegram = ["python-telegram-bot>=21"]
-discord = ["discord.py>=2.4"]
 lint = [
     "ruff>=0.11",
     "ty>=0.0.1a7",

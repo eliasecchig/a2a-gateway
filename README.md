@@ -27,13 +27,6 @@ cd a2a-gateway
 uv sync
 ```
 
-Telegram and Discord are optional extras (they pull in `python-telegram-bot` and `discord.py`):
-
-```bash
-uv sync --extra telegram
-uv sync --extra discord
-```
-
 The simplest way to run is with env vars, no config file needed:
 
 ```bash
