@@ -12,11 +12,11 @@ A multi-channel gateway that bridges messaging platforms (Slack, WhatsApp, Googl
 
 ```bash
 uv sync                                    # Install dependencies
-uv run python run.py                       # Start the gateway
+uv run python -m gateway                   # Start the gateway
 uv run pytest                              # Run tests (skips live tests)
 uv run pytest -m live                      # Run live integration tests
-uv run ruff check gateway/ tests/ run.py   # Lint
-uv run ruff format gateway/ tests/ run.py  # Format
+uv run ruff check gateway/ tests/          # Lint
+uv run ruff format gateway/ tests/         # Format
 ```
 
 ## Project Structure

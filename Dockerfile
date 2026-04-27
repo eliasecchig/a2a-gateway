@@ -8,7 +8,6 @@ RUN uv sync --no-dev --no-install-project
 
 COPY gateway/ gateway/
 COPY agent/ agent/
-COPY run.py .
 
 RUN uv sync --no-dev
 
@@ -19,4 +18,4 @@ COPY --from=builder /app /app
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/python", "run.py"]
+CMD ["/app/.venv/bin/python", "-m", "gateway"]

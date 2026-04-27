@@ -36,9 +36,10 @@ export SLACK_APP_TOKEN=xapp-your-token
 uv run a2a-gateway
 ```
 
-Or with a config file:
+Or with a config file (copy from `config.example.yaml`):
 
 ```bash
+cp config.example.yaml config.yaml
 uv run a2a-gateway --config config.yaml
 ```
 

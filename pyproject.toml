@@ -38,7 +38,7 @@ Repository = "https://github.com/eliasecchig/a2a-gateway"
 Issues = "https://github.com/eliasecchig/a2a-gateway/issues"
 
 [project.scripts]
-a2a-gateway = "run:main"
+a2a-gateway = "gateway.__main__:main"
 
 [project.optional-dependencies]
 lint = [
@@ -58,7 +58,7 @@ dev = [
 [tool.ruff]
 line-length = 90
 target-version = "py312"
-include = ["gateway/**/*.py", "agent/**/*.py", "tests/**/*.py", "run.py"]
+include = ["gateway/**/*.py", "agent/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
 preview = true
