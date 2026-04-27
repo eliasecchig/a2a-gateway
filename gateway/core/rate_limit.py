@@ -85,7 +85,8 @@ class RateLimiter:
 
     def _cleanup_expired(self, now: float) -> None:
         expired = [
-            k for k, start in self._window_start.items()
+            k
+            for k, start in self._window_start.items()
             if now - start >= self._window * 2
         ]
         for k in expired:

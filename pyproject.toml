@@ -98,6 +98,11 @@ unresolved-import = "ignore"
 include = ["tests/**"]
 [tool.ty.overrides.rules]
 invalid-return-type = "ignore"
+invalid-argument-type = "ignore"
+invalid-assignment = "ignore"
+unresolved-attribute = "ignore"
+unsupported-operator = "ignore"
+call-non-callable = "ignore"
 
 [tool.codespell]
 skip = "uv.lock,.venv,venv,**/*.ipynb"

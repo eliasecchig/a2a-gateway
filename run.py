@@ -22,6 +22,7 @@ import uvicorn
 
 try:
     import uvloop  # noqa: F401
+
     _LOOP = "uvloop"
 except ImportError:
     _LOOP = "auto"
