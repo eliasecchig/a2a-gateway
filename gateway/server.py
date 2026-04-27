@@ -307,7 +307,8 @@ def _build_rate_limiting(
         window_seconds=rl.channel.window_seconds,
     )
     channel_rates: dict[str, RateLimitConfig] = dict.fromkeys(
-        ("slack", "whatsapp", "google_chat", "email"), channel_rate
+        ("slack", "whatsapp", "google_chat", "email", "telegram", "discord"),
+        channel_rate,
     )
     for ch, override in rl.channel_overrides.items():
         channel_rates[ch] = RateLimitConfig(
