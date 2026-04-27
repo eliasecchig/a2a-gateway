@@ -43,7 +43,7 @@ class GroupPolicyChecker:
         if not msg.is_group:
             return True
 
-        base_channel = msg.channel.split(":")[0]
+        base_channel = msg.channel.partition(":")[0]
         policy = self._policies.get(base_channel, GroupPolicyConfig())
 
         conv_id = msg.conversation_id or ""

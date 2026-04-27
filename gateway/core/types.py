@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass
+@dataclass(slots=True)
 class Attachment:
     url: str | None = None
     data: bytes | None = None
@@ -27,7 +27,7 @@ class Attachment:
     size: int | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class InboundMessage:
     channel: str
     sender_id: str
@@ -41,7 +41,7 @@ class InboundMessage:
     attachments: list[Attachment] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 class Button:
     label: str
     action_id: str
@@ -49,20 +49,20 @@ class Button:
     style: str = "default"
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectOption:
     label: str
     value: str
 
 
-@dataclass
+@dataclass(slots=True)
 class Select:
     action_id: str
     placeholder: str = ""
     options: list[SelectOption] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 class Card:
     title: str
     subtitle: str = ""
@@ -75,7 +75,7 @@ class Card:
 InteractiveElement = Button | Select | Card
 
 
-@dataclass
+@dataclass(slots=True)
 class OutboundMessage:
     channel: str
     recipient_id: str

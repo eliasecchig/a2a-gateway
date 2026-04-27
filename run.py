@@ -20,6 +20,12 @@ import multiprocessing
 
 import uvicorn
 
+try:
+    import uvloop  # noqa: F401
+    _LOOP = "uvloop"
+except ImportError:
+    _LOOP = "auto"
+
 from gateway.config import load_config
 from gateway.core.logging import configure_logging
 from gateway.server import create_app
@@ -55,7 +61,7 @@ def main() -> None:
         logging.info("dummy agent starting on port %d", args.agent_port)
 
     app = create_app(config)
-    uvicorn.run(app, host=config.host, port=config.port)
+    uvicorn.run(app, host=config.host, port=config.port, loop=_LOOP)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,9 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
+_RE_DOUBLE_NEWLINE = re.compile(r"\n{2,}")
+_RE_FENCE_OPEN = re.compile(r"^```(\w*)", re.MULTILINE)
+
 
 class ChunkMode(Enum):
     LENGTH = "length"
@@ -68,7 +71,7 @@ class MessageChunker:
         return self._fixup_fences([c for c in chunks if c])
 
     def _chunk_newline(self, text: str, limit: int) -> list[str]:
-        paragraphs = re.split(r"\n{2,}", text)
+        paragraphs = _RE_DOUBLE_NEWLINE.split(text)
         chunks: list[str] = []
         current = ""
 
@@ -99,7 +102,7 @@ class MessageChunker:
             if fence_open:
                 chunk = f"```{fence_lang}\n{chunk}"
 
-            opens = list(re.finditer(r"^```(\w*)", chunk, re.MULTILINE))
+            opens = list(_RE_FENCE_OPEN.finditer(chunk))
             for m in opens:
                 if fence_open:
                     fence_open = False

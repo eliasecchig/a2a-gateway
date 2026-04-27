@@ -29,6 +29,7 @@ dependencies = [
     "a2a-sdk[http-server]==0.3.26",
     "python-telegram-bot>=21",
     "discord.py>=2.4",
+    "uvloop>=0.21; sys_platform != 'win32'",
 ]
 
 [project.urls]

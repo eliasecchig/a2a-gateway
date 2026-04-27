@@ -48,6 +48,9 @@ class BackoffConfig:
     max_retries: int = 5
 
 
+_CLEANUP_INTERVAL = 60.0
+
+
 class RateLimiter:
     def __init__(self, config: RateLimitConfig) -> None:
         self._max = config.max_requests
@@ -55,11 +58,16 @@ class RateLimiter:
         self._counts: dict[str, int] = {}
         self._window_start: dict[str, float] = {}
         self._lock = asyncio.Lock()
+        self._last_cleanup = 0.0
 
     async def acquire(self, key: str = "__global__") -> None:
         while True:
             async with self._lock:
                 now = time.monotonic()
+
+                if now - self._last_cleanup >= _CLEANUP_INTERVAL:
+                    self._cleanup_expired(now)
+
                 start = self._window_start.get(key, 0.0)
 
                 if now - start >= self._window:
@@ -74,6 +82,16 @@ class RateLimiter:
 
             logger.warning("rate limit hit for key=%s, waiting %.1fs", key, wait)
             await asyncio.sleep(max(wait, 0))
+
+    def _cleanup_expired(self, now: float) -> None:
+        expired = [
+            k for k, start in self._window_start.items()
+            if now - start >= self._window * 2
+        ]
+        for k in expired:
+            del self._counts[k]
+            del self._window_start[k]
+        self._last_cleanup = now
 
 
 class RetryWithBackoff:

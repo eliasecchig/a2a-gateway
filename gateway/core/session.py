@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class SessionState:
     context_id: str | None = None
     task_id: str | None = None

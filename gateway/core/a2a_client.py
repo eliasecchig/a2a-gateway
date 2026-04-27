@@ -24,6 +24,7 @@ from typing import Any
 import httpx
 
 from gateway.core.auth import AuthProvider
+from gateway.core.media import extract_file_parts
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,13 @@ class A2AClient:
         auth: AuthProvider | None = None,
     ) -> None:
         self.server_url = server_url.rstrip("/")
-        self._http = httpx.AsyncClient(timeout=60.0)
+        self._http = httpx.AsyncClient(
+            timeout=60.0,
+            limits=httpx.Limits(
+                max_connections=100,
+                max_keepalive_connections=20,
+            ),
+        )
         self._request_id = itertools.count(1)
         self._auth = auth
 
@@ -173,8 +180,6 @@ class A2AStreamEvent:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AStreamEvent:
-        from gateway.core.media import extract_file_parts
-
         status = result.get("status", {})
         is_final = status.get("state") in ("completed", "failed", "canceled")
 
@@ -205,8 +210,6 @@ class A2AResponse:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AResponse:
-        from gateway.core.media import extract_file_parts
-
         text = _extract_text_from_result(result) or "(no response)"
 
         return cls(

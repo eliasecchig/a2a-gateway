@@ -155,7 +155,7 @@ class Router:
 
     @staticmethod
     def _base_channel(channel: str) -> str:
-        return channel.split(":")[0]
+        return channel.partition(":")[0]
 
     async def _handle_inner(self, msg: InboundMessage) -> None:
         if self._policy and not self._policy.should_process(msg):

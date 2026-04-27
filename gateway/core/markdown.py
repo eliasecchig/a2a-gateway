@@ -18,6 +18,15 @@ import html
 import re
 from abc import ABC, abstractmethod
 
+_RE_CODE_BLOCK = re.compile(r"(```[\s\S]*?```)")
+_RE_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_RE_UNDERLINE = re.compile(r"__(.+?)__")
+_RE_STRIKE = re.compile(r"~~(.+?)~~")
+_RE_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+_RE_HEADING = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+_RE_IMAGE = re.compile(r"!\[.*?\]\(.*?\)")
+_RE_HR = re.compile(r"^---+$", re.MULTILINE)
+
 
 class MarkdownAdapter(ABC):
     @abstractmethod
@@ -31,7 +40,7 @@ class PassthroughMarkdown(MarkdownAdapter):
 
 class WhatsAppMarkdownAdapter(MarkdownAdapter):
     def format_text(self, text: str) -> str:
-        parts = re.split(r"(```[\s\S]*?```)", text)
+        parts = _RE_CODE_BLOCK.split(text)
         result: list[str] = []
         for part in parts:
             if part.startswith("```"):
@@ -41,20 +50,20 @@ class WhatsAppMarkdownAdapter(MarkdownAdapter):
         return "".join(result)
 
     def _convert_inline(self, text: str) -> str:
-        text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
-        text = re.sub(r"__(.+?)__", r"_\1_", text)
-        text = re.sub(r"~~(.+?)~~", r"~\1~", text)
-        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
-        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
-        text = re.sub(r"!\[.*?\]\(.*?\)", "", text)
-        text = re.sub(r"^---+$", "", text, flags=re.MULTILINE)
+        text = _RE_BOLD.sub(r"*\1*", text)
+        text = _RE_UNDERLINE.sub(r"_\1_", text)
+        text = _RE_STRIKE.sub(r"~\1~", text)
+        text = _RE_LINK.sub(r"\1 (\2)", text)
+        text = _RE_HEADING.sub("", text)
+        text = _RE_IMAGE.sub("", text)
+        text = _RE_HR.sub("", text)
         return text
 
 
 class SlackMarkdownAdapter(MarkdownAdapter):
     def format_text(self, text: str) -> str:
         text = html.unescape(text)
-        parts = re.split(r"(```[\s\S]*?```)", text)
+        parts = _RE_CODE_BLOCK.split(text)
         result: list[str] = []
         for part in parts:
             if part.startswith("```"):
@@ -64,8 +73,8 @@ class SlackMarkdownAdapter(MarkdownAdapter):
         return "".join(result)
 
     def _convert_inline(self, text: str) -> str:
-        text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
-        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"<\2|\1>", text)
+        text = _RE_BOLD.sub(r"*\1*", text)
+        text = _RE_LINK.sub(r"<\2|\1>", text)
         return text
 
 
