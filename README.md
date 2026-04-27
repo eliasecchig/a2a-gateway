@@ -336,9 +336,20 @@ channels:
 
 ## Docker
 
+A prebuilt image is published to GitHub Container Registry on every push to `main`:
+
+```bash
+docker run -p 8000:8000 \
+  -e A2A_SERVER_URL=http://your-agent:8001 \
+  -e SLACK_BOT_TOKEN=xoxb-your-token \
+  -e SLACK_APP_TOKEN=xapp-your-token \
+  ghcr.io/eliasecchig/a2a-gateway:main
+```
+
+Or build it yourself:
+
 ```bash
 docker build -t a2a-gateway .
-
 docker run -p 8000:8000 \
   -e A2A_SERVER_URL=http://your-agent:8001 \
   -e SLACK_BOT_TOKEN=xoxb-your-token \
@@ -346,7 +357,7 @@ docker run -p 8000:8000 \
   a2a-gateway
 ```
 
-Or mount a config file: `-v $(pwd)/config.yaml:/app/config.yaml`.
+Mount a config file: `-v $(pwd)/config.yaml:/app/config.yaml`.
 
 ## Testing
 
