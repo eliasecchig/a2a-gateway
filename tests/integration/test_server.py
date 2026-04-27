@@ -5,7 +5,18 @@ from unittest.mock import patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from gateway.config import GatewayConfig, GoogleChatAccountConfig, WhatsAppAccountConfig
+from gateway.config import (
+    ChunkingConfig,
+    ConcurrencyConfig,
+    DebounceConfig,
+    GatewayConfig,
+    GoogleChatAccountConfig,
+    HealthConfig,
+    RateLimitingConfig,
+    SessionConfig,
+    StreamingConfig,
+    WhatsAppAccountConfig,
+)
 from gateway.server import create_app
 
 
@@ -21,15 +32,14 @@ class TestServer:
         assert resp.status_code == 200
         assert resp.json() == {"status": "ok"}
 
-    async def test_ready_endpoint_without_health(self):
+    async def test_ready_returns_503_with_no_adapters(self):
         config = GatewayConfig()
         app = create_app(config)
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             resp = await client.get("/ready")
-        assert resp.status_code == 200
-        assert resp.json() == {"status": "ok"}
+        assert resp.status_code == 503
 
     async def test_health_endpoint(self):
         config = GatewayConfig()
@@ -174,6 +184,27 @@ class TestServer:
         ) as client:
             resp = await client.post("/webhooks/google-chat", json=event)
         assert resp.status_code == 200
+
+    async def test_all_defaults_disabled(self):
+        config = GatewayConfig(
+            chunking=ChunkingConfig(enabled=False),
+            debounce=DebounceConfig(enabled=False),
+            rate_limiting=RateLimitingConfig(enabled=False),
+            health=HealthConfig(enabled=False),
+            session=SessionConfig(enabled=False),
+            concurrency=ConcurrencyConfig(enabled=False),
+            streaming=StreamingConfig(enabled=False),
+        )
+        app = create_app(config)
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/live")
+            assert resp.status_code == 200
+            resp = await client.get("/ready")
+            assert resp.status_code == 200
+            resp = await client.get("/health")
+            assert resp.status_code == 200
 
     async def test_lifespan_starts_and_stops_adapters(self):
         config = GatewayConfig(

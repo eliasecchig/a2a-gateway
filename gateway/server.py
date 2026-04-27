@@ -57,15 +57,13 @@ def create_app(config: GatewayConfig) -> FastAPI:
         backoff_overrides=backoff_overrides,
         health_monitor=health,
         session_idle_timeout_minutes=(
-            config.session.idle_timeout_minutes if config.session else None
+            config.session.idle_timeout_minutes if config.session.enabled else None
         ),
         concurrency_limiter=concurrency,
         typing_indicator=typing,
         ack_config=ack_cfg,
         streaming_update_interval_ms=(
-            config.streaming.update_interval_ms
-            if config.streaming and config.streaming.enabled
-            else None
+            config.streaming.update_interval_ms if config.streaming.enabled else None
         ),
     )
 
@@ -215,17 +213,15 @@ def _build_typing(config: GatewayConfig) -> TypingIndicator | None:
 
 
 def _build_concurrency(config: GatewayConfig) -> ConcurrencyLimiter | None:
-    c = config.concurrency
-    if not c:
+    if not config.concurrency.enabled:
         return None
-    return ConcurrencyLimiter(c)
+    return ConcurrencyLimiter(config.concurrency)
 
 
 def _build_health(config: GatewayConfig) -> HealthMonitor | None:
-    h = config.health
-    if not h:
+    if not config.health.enabled:
         return None
-    return HealthMonitor(stale_timeout_seconds=h.stale_timeout_seconds)
+    return HealthMonitor(stale_timeout_seconds=config.health.stale_timeout_seconds)
 
 
 def _build_policy_checker(config: GatewayConfig) -> GroupPolicyChecker | None:
@@ -251,7 +247,7 @@ def _build_policy_checker(config: GatewayConfig) -> GroupPolicyChecker | None:
 
 def _build_debounce(config: GatewayConfig) -> DebounceConfig | None:
     d = config.debounce
-    if not d:
+    if not d.enabled:
         return None
     return DebounceConfig(
         window_ms=d.window_ms,
@@ -261,12 +257,11 @@ def _build_debounce(config: GatewayConfig) -> DebounceConfig | None:
 
 
 def _build_chunk(config: GatewayConfig) -> ChunkConfig | None:
-    c = config.chunking
-    if not c:
+    if not config.chunking.enabled:
         return None
     return ChunkConfig(
-        mode=ChunkMode(c.mode),
-        default_limit=c.default_limit,
+        mode=ChunkMode(config.chunking.mode),
+        default_limit=config.chunking.default_limit,
     )
 
 
@@ -275,30 +270,10 @@ def _build_rate_limiting(
 ) -> tuple[
     RateLimitConfig | None,
     dict[str, RateLimitConfig] | None,
-    BackoffConfig | None,
+    BackoffConfig,
     dict[str, BackoffConfig] | None,
 ]:
     rl = config.rate_limiting
-    if not rl:
-        return None, None, None, None
-
-    a2a_rate = RateLimitConfig(
-        max_requests=rl.a2a.max_requests,
-        window_seconds=rl.a2a.window_seconds,
-    )
-
-    channel_rate = RateLimitConfig(
-        max_requests=rl.channel.max_requests,
-        window_seconds=rl.channel.window_seconds,
-    )
-    channel_rates: dict[str, RateLimitConfig] = dict.fromkeys(
-        ("slack", "whatsapp", "google_chat", "email"), channel_rate
-    )
-    for ch, override in rl.channel_overrides.items():
-        channel_rates[ch] = RateLimitConfig(
-            max_requests=override.max_requests,
-            window_seconds=override.window_seconds,
-        )
 
     backoff = BackoffConfig(
         initial=rl.backoff.initial,
@@ -318,5 +293,26 @@ def _build_rate_limiting(
             )
             for ch, bo in rl.backoff_overrides.items()
         }
+
+    if not rl.enabled:
+        return None, None, backoff, backoff_overrides
+
+    a2a_rate = RateLimitConfig(
+        max_requests=rl.a2a.max_requests,
+        window_seconds=rl.a2a.window_seconds,
+    )
+
+    channel_rate = RateLimitConfig(
+        max_requests=rl.channel.max_requests,
+        window_seconds=rl.channel.window_seconds,
+    )
+    channel_rates: dict[str, RateLimitConfig] = dict.fromkeys(
+        ("slack", "whatsapp", "google_chat", "email"), channel_rate
+    )
+    for ch, override in rl.channel_overrides.items():
+        channel_rates[ch] = RateLimitConfig(
+            max_requests=override.max_requests,
+            window_seconds=override.window_seconds,
+        )
 
     return a2a_rate, channel_rates, backoff, backoff_overrides

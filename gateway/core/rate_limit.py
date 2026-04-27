@@ -72,9 +72,7 @@ class RateLimiter:
 
                 wait = self._window - (now - start)
 
-            logger.warning(
-                "rate limit hit for key=%s, waiting %.1fs", key, wait
-            )
+            logger.warning("rate limit hit for key=%s, waiting %.1fs", key, wait)
             await asyncio.sleep(max(wait, 0))
 
 

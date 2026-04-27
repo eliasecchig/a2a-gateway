@@ -87,7 +87,9 @@ class SlackAdapter(ChannelAdapter):
             auth = await self._app.client.auth_test()
             self._bot_user_id = auth.get("user_id", "")
         except Exception:
-            logger.error("could not resolve slack bot user id, mention detection will not work")
+            logger.error(
+                "could not resolve slack bot user id, mention detection will not work"
+            )
 
         self._handler = AsyncSocketModeHandler(self._app, self._app_token)
         self._start_task = asyncio.create_task(

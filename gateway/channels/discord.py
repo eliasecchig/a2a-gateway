@@ -156,7 +156,9 @@ class DiscordAdapter(ChannelAdapter):
             ch_id = int(conversation_id)
             m_id = int(message_id)
         except (ValueError, TypeError):
-            logger.warning("invalid discord ids: channel=%s msg=%s", conversation_id, message_id)
+            logger.warning(
+                "invalid discord ids: channel=%s msg=%s", conversation_id, message_id
+            )
             return
         channel = self._client.get_channel(ch_id)
         if not channel or not isinstance(channel, discord.abc.Messageable):

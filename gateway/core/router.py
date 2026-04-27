@@ -71,7 +71,7 @@ class Router:
         self._streaming_update_interval_ms = streaming_update_interval_ms
 
         self._policy = policy_checker
-        self._chunker = MessageChunker(chunk_config)
+        self._chunker = MessageChunker(chunk_config) if chunk_config else None
         self._retry = RetryWithBackoff(backoff_config)
         self._channel_retries: dict[str, RetryWithBackoff] = {}
         if backoff_overrides:
@@ -218,7 +218,11 @@ class Router:
 
         formatted_text = get_markdown_adapter(base_ch).format_text(resp.text)
 
-        chunks = self._chunker.chunk(formatted_text, base_ch)
+        chunks = (
+            self._chunker.chunk(formatted_text, base_ch)
+            if self._chunker
+            else [formatted_text]
+        )
 
         logger.info(
             "[%s] response: %d chars, %d chunk(s), %.0fms",

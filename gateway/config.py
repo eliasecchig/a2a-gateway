@@ -92,12 +92,14 @@ class EmailAccountConfig:
 
 @dataclass
 class ChunkingConfig:
+    enabled: bool = True
     mode: str = "newline"
     default_limit: int = 4000
 
 
 @dataclass
 class DebounceConfig:
+    enabled: bool = True
     window_ms: int = 500
     max_messages: int = 10
     max_chars: int = 4000
@@ -119,6 +121,7 @@ class BackoffEntry:
 
 @dataclass
 class RateLimitingConfig:
+    enabled: bool = True
     a2a: RateLimitEntry = field(default_factory=RateLimitEntry)
     channel: RateLimitEntry = field(
         default_factory=lambda: RateLimitEntry(max_requests=30)
@@ -149,17 +152,20 @@ class StreamingConfig:
 
 @dataclass
 class ConcurrencyConfig:
+    enabled: bool = True
     max_concurrent: int = 5
     per: str = "conversation"
 
 
 @dataclass
 class SessionConfig:
+    enabled: bool = True
     idle_timeout_minutes: float = 30.0
 
 
 @dataclass
 class HealthConfig:
+    enabled: bool = True
     stale_timeout_seconds: float = 300.0
 
 
@@ -202,17 +208,18 @@ class GatewayConfig:
     telegram_accounts: list[TelegramAccountConfig] = field(default_factory=list)
     email_accounts: list[EmailAccountConfig] = field(default_factory=list)
 
-    chunking: ChunkingConfig | None = None
-    debounce: DebounceConfig | None = None
-    rate_limiting: RateLimitingConfig | None = None
+    chunking: ChunkingConfig = field(default_factory=ChunkingConfig)
+    debounce: DebounceConfig = field(default_factory=DebounceConfig)
+    rate_limiting: RateLimitingConfig = field(default_factory=RateLimitingConfig)
+    health: HealthConfig = field(default_factory=HealthConfig)
+    session: SessionConfig = field(default_factory=SessionConfig)
+    concurrency: ConcurrencyConfig = field(default_factory=ConcurrencyConfig)
+    streaming: StreamingConfig = field(default_factory=StreamingConfig)
+
     group_policies: GroupPoliciesConfig | None = None
     logging: LoggingConfig | None = None
-    health: HealthConfig | None = None
-    session: SessionConfig | None = None
-    concurrency: ConcurrencyConfig | None = None
     typing: TypingConfig | None = None
     ack: AckConfig | None = None
-    streaming: StreamingConfig | None = None
 
 
 def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
@@ -242,17 +249,17 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
             TelegramAccountConfig, channels.get("telegram")
         ),
         email_accounts=_parse_accounts(EmailAccountConfig, channels.get("email")),
-        chunking=_build_optional(ChunkingConfig, raw.get("chunking")),
-        debounce=_build_optional(DebounceConfig, raw.get("debounce")),
-        rate_limiting=_parse_rate_limiting(raw.get("rate_limiting")),
+        chunking=_build_with_defaults(ChunkingConfig, raw.get("chunking")),
+        debounce=_build_with_defaults(DebounceConfig, raw.get("debounce")),
+        rate_limiting=_parse_rate_limiting(raw.get("rate_limiting", {})),
+        health=_build_with_defaults(HealthConfig, raw.get("health")),
+        session=_build_with_defaults(SessionConfig, raw.get("session")),
+        concurrency=_build_with_defaults(ConcurrencyConfig, raw.get("concurrency")),
+        streaming=_build_with_defaults(StreamingConfig, raw.get("streaming")),
         group_policies=_parse_group_policies(raw.get("group_policies")),
         logging=_parse_logging(raw.get("logging")),
-        health=_build_optional(HealthConfig, raw.get("health")),
-        session=_build_optional(SessionConfig, raw.get("session")),
-        concurrency=_build_optional(ConcurrencyConfig, raw.get("concurrency")),
         typing=_build_optional(TypingConfig, raw.get("typing")),
         ack=_parse_ack(raw.get("ack")),
-        streaming=_build_optional(StreamingConfig, raw.get("streaming")),
     )
 
     _apply_env_overrides(cfg)
@@ -315,7 +322,9 @@ def _apply_env_overrides(cfg: GatewayConfig) -> None:
             EmailAccountConfig(
                 enabled=True,
                 listen_host=env("EMAIL_LISTEN_HOST", "0.0.0.0"),
-                listen_port=_safe_int(env("EMAIL_LISTEN_PORT", "1025"), "EMAIL_LISTEN_PORT"),
+                listen_port=_safe_int(
+                    env("EMAIL_LISTEN_PORT", "1025"), "EMAIL_LISTEN_PORT"
+                ),
                 smtp_host=host,
                 smtp_port=_safe_int(env("EMAIL_SMTP_PORT", "587"), "EMAIL_SMTP_PORT"),
                 from_address=env("EMAIL_FROM_ADDRESS", "agent@example.com"),
@@ -340,6 +349,12 @@ def _build(cls: type[T], data: dict[str, Any]) -> T:
     return cls(**{k: v for k, v in data.items() if k in valid})
 
 
+def _build_with_defaults(cls: type[T], data: dict[str, Any] | None) -> T:
+    if not data:
+        return cls()
+    return _build(cls, data)
+
+
 def _build_optional(cls: type[T], data: dict[str, Any] | None) -> T | None:
     if not data:
         return None
@@ -356,9 +371,7 @@ def _parse_accounts(cls: type[T], data: Any) -> list[T]:
     return []
 
 
-def _parse_rate_limiting(data: dict | None) -> RateLimitingConfig | None:
-    if not data:
-        return None
+def _parse_rate_limiting(data: dict) -> RateLimitingConfig:
     channel_overrides = {
         ch: _build(RateLimitEntry, cfg)
         for ch, cfg in data.get("channel_overrides", {}).items()
@@ -368,6 +381,7 @@ def _parse_rate_limiting(data: dict | None) -> RateLimitingConfig | None:
         for ch, cfg in data.get("backoff_overrides", {}).items()
     }
     return RateLimitingConfig(
+        enabled=data.get("enabled", True),
         a2a=_build(RateLimitEntry, data.get("a2a", {})),
         channel=_build(RateLimitEntry, data.get("channel", {})),
         backoff=_build(BackoffEntry, data.get("backoff", {})),

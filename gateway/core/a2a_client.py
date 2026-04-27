@@ -132,9 +132,7 @@ class A2AClient:
                 try:
                     event = json.loads(data)
                 except json.JSONDecodeError:
-                    logger.warning(
-                        "malformed SSE data, skipping: %s", data[:200]
-                    )
+                    logger.warning("malformed SSE data, skipping: %s", data[:200])
                     continue
                 result = event.get("result", {})
                 yield A2AStreamEvent.from_result(result)

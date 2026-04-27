@@ -184,93 +184,85 @@ channels:
 
 YAML takes priority over env vars. You can mix both.
 
-### Optional features
+### What's on by default
 
-All features below are opt-in. Add the relevant section to `config.yaml` to enable them.
+These features run out of the box with sensible defaults. No config needed, but you can override or disable any of them in `config.yaml`.
 
-<details>
-<summary><b>Chunking</b></summary>
+| Feature | Default | What it does |
+|---------|---------|-------------|
+| **Chunking** | newline mode, 4000 char limit | Splits long responses at paragraph boundaries, per-channel limits |
+| **Debouncing** | 500ms window, 10 messages | Coalesces rapid messages into a single A2A call |
+| **Rate limiting** | 60 req/min (A2A), 30 req/min (channel) | Protects both sides with exponential backoff retries |
+| **Streaming** | enabled, 500ms update interval | Edits messages in-place as tokens arrive (if agent supports it) |
+| **Health endpoints** | 5 min stale timeout | `/live`, `/ready`, `/health` for k8s probes |
+| **Session management** | 30 min idle timeout | Tracks conversation context, cleans up idle sessions |
+| **Concurrency limits** | 5 per conversation | Prevents a single conversation from overloading the agent |
+| **Capability discovery** | always on | Fetches `/.well-known/agent.json` on startup, adapts automatically |
+| **Interactive elements** | always on | Buttons, selects, cards with per-channel rendering (Block Kit on Slack, text fallback elsewhere) |
 
-Splits long responses at paragraph boundaries. Respects per-channel limits (Slack: 4000, WhatsApp: 4096, Telegram: 4096, Discord: 2000) and keeps code fences intact.
-
-```yaml
-chunking:
-  mode: "newline"       # or "length" for hard splits
-  default_limit: 4000
-```
-</details>
-
-<details>
-<summary><b>Debouncing</b></summary>
-
-Buffers rapid messages into a single A2A call.
+Every default-on feature accepts `enabled: false` to turn it off entirely:
 
 ```yaml
 debounce:
-  window_ms: 500
-  max_messages: 10
-  max_chars: 4000
+  enabled: false
+
+streaming:
+  enabled: false
 ```
-</details>
 
 <details>
-<summary><b>Rate limiting</b></summary>
-
-Separate limits for the A2A side and the channel side, with per-channel overrides.
+<summary>Override the defaults</summary>
 
 ```yaml
+chunking:
+  enabled: true
+  mode: "length"          # "newline" (default) or "length"
+  default_limit: 2000
+
+debounce:
+  enabled: true
+  window_ms: 300
+  max_messages: 5
+  max_chars: 2000
+
 rate_limiting:
+  enabled: true
   a2a:
-    max_requests: 60
+    max_requests: 120
     window_seconds: 60
   channel:
-    max_requests: 30
+    max_requests: 50
     window_seconds: 60
   channel_overrides:
-    slack: { max_requests: 50 }
     whatsapp: { max_requests: 20 }
   backoff:
     initial: 1.0
     factor: 2.0
     max_delay: 300
     max_retries: 5
+
+streaming:
+  enabled: true
+  update_interval_ms: 300
+
+health:
+  enabled: true
+  stale_timeout_seconds: 600
+
+session:
+  enabled: true
+  idle_timeout_minutes: 60
+
+concurrency:
+  enabled: true
+  max_concurrent: 10
+  per: "user"             # "conversation" (default), "user", or "global"
 ```
 </details>
 
-<details>
-<summary><b>Group policies</b></summary>
+### Opt-in features
 
-Controls whether the bot responds in group chats: `open`, `mention_only`, or `disabled`.
-
-```yaml
-group_policies:
-  slack:
-    mode: "mention_only"
-    overrides:
-      "C12345": "open"
-  telegram:
-    mode: "mention_only"
-  discord:
-    mode: "mention_only"
-```
-</details>
-
-<details>
-<summary><b>Feature flags</b></summary>
-
-Toggle pipeline features per account.
-
-```yaml
-channels:
-  slack:
-    enabled: true
-    bot_token: "xoxb-..."
-    app_token: "xapp-..."
-    features:
-      typing: true
-      ack: false
-```
-</details>
+These are off by default. Add the relevant section to `config.yaml` to turn them on.
 
 <details>
 <summary><b>Typing indicators</b></summary>
@@ -301,75 +293,52 @@ ack:
 </details>
 
 <details>
-<summary><b>Streaming</b></summary>
+<summary><b>Group policies</b></summary>
 
-If the A2A agent supports SSE streaming (`message/stream`) and the channel supports message editing, the gateway edits the sent message in-place as tokens arrive. Falls back to regular request/response otherwise.
-
-```yaml
-streaming:
-  enabled: true
-  update_interval_ms: 500
-```
-</details>
-
-<details>
-<summary><b>Session management</b></summary>
+Controls whether the bot responds in group chats: `open`, `mention_only`, or `disabled`.
 
 ```yaml
-session:
-  idle_timeout_minutes: 30
-```
-</details>
-
-<details>
-<summary><b>Concurrency limits</b></summary>
-
-Caps in-flight A2A calls per conversation, user, or globally.
-
-```yaml
-concurrency:
-  max_concurrent: 5
-  per: "conversation"   # or "user", "global"
+group_policies:
+  slack:
+    mode: "mention_only"
+    overrides:
+      "C12345": "open"
+  telegram:
+    mode: "mention_only"
+  discord:
+    mode: "mention_only"
 ```
 </details>
 
 <details>
 <summary><b>Structured logging</b></summary>
 
+Switches log output to JSON and allows per-subsystem level overrides.
+
 ```yaml
 logging:
   level: "INFO"
-  format: "json"        # or "text"
+  format: "json"
   subsystem_levels:
     gateway.core.router: "DEBUG"
 ```
 </details>
 
 <details>
-<summary><b>Health endpoints</b></summary>
+<summary><b>Feature flags</b></summary>
 
-Three endpoints for k8s probes and monitoring:
-
-- `GET /live` — always 200
-- `GET /ready` — 200 if at least one adapter is healthy, 503 otherwise
-- `GET /health` — per-adapter status + agent capabilities
+Toggle pipeline features per account. Useful for disabling typing or ACK on specific accounts.
 
 ```yaml
-health:
-  stale_timeout_seconds: 300
+channels:
+  slack:
+    enabled: true
+    bot_token: "xoxb-..."
+    app_token: "xapp-..."
+    features:
+      typing: true
+      ack: false
 ```
-</details>
-
-<details>
-<summary><b>Interactive elements</b></summary>
-
-Buttons, dropdown selects, and cards. Slack gets native Block Kit rendering; other channels get a text fallback. Interaction callbacks (button clicks, select choices) are routed back to the A2A agent as new messages.
-</details>
-
-<details>
-<summary><b>Capability discovery</b></summary>
-
-On startup the gateway fetches `/.well-known/agent.json` from the A2A server. If the agent advertises streaming support and the channel supports editing, streaming kicks in automatically. No config needed.
 </details>
 
 ## Docker

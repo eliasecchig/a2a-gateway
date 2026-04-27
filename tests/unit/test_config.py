@@ -92,15 +92,28 @@ class TestLoadConfig:
         cfg = load_config(p)
         assert cfg.slack_accounts == []
 
-    def test_feature_configs_none_when_absent(self, tmp_path: Path):
+    def test_default_on_features_have_defaults(self, tmp_path: Path):
         data = {"channels": {}}
         p = tmp_path / "config.yaml"
         p.write_text(yaml.dump(data))
         cfg = load_config(p)
-        assert cfg.chunking is None
-        assert cfg.debounce is None
-        assert cfg.rate_limiting is None
+        assert cfg.chunking is not None
+        assert cfg.debounce is not None
+        assert cfg.rate_limiting is not None
+        assert cfg.health is not None
+        assert cfg.session is not None
+        assert cfg.concurrency is not None
+        assert cfg.streaming is not None
+
+    def test_opt_in_features_none_when_absent(self, tmp_path: Path):
+        data = {"channels": {}}
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
         assert cfg.group_policies is None
+        assert cfg.typing is None
+        assert cfg.ack is None
+        assert cfg.logging is None
 
     def test_chunking_config_parsed(self, tmp_path: Path):
         data = {"chunking": {"mode": "length", "default_limit": 2000}}
@@ -153,6 +166,27 @@ class TestLoadConfig:
         assert cfg.rate_limiting.a2a.max_requests == 100
         assert cfg.rate_limiting.channel.max_requests == 20
         assert cfg.rate_limiting.backoff.factor == 3.0
+
+    def test_features_can_be_disabled(self, tmp_path: Path):
+        data = {
+            "chunking": {"enabled": False},
+            "debounce": {"enabled": False},
+            "rate_limiting": {"enabled": False},
+            "health": {"enabled": False},
+            "session": {"enabled": False},
+            "concurrency": {"enabled": False},
+            "streaming": {"enabled": False},
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert cfg.chunking.enabled is False
+        assert cfg.debounce.enabled is False
+        assert cfg.rate_limiting.enabled is False
+        assert cfg.health.enabled is False
+        assert cfg.session.enabled is False
+        assert cfg.concurrency.enabled is False
+        assert cfg.streaming.enabled is False
 
     def test_a2a_server_url(self, tmp_path: Path):
         data = {"a2a": {"server_url": "http://myagent:9000"}}

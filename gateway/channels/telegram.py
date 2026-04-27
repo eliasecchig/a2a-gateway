@@ -58,7 +58,9 @@ class TelegramAdapter(ChannelAdapter):
             me = await self._bot.get_me()
             self._bot_username = me.username or ""
         except Exception:
-            logger.error("could not resolve telegram bot username, mention detection will not work")
+            logger.error(
+                "could not resolve telegram bot username, mention detection will not work"
+            )
 
         self._app.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self._on_message)
@@ -79,7 +81,7 @@ class TelegramAdapter(ChannelAdapter):
             self._account_id,
         )
 
-    def _on_task_done(self, task: asyncio.Task[None]) -> None:
+    def _on_task_done(self, task: asyncio.Task) -> None:  # type: ignore[type-arg]
         if task.cancelled():
             return
         exc = task.exception()

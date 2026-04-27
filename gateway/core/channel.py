@@ -84,6 +84,4 @@ class ChannelAdapter(ABC):
         if self.on_message is not None:
             await self.on_message(message)
         else:
-            logger.warning(
-                "message from %s dropped: on_message not set", self.name
-            )
+            logger.warning("message from %s dropped: on_message not set", self.name)

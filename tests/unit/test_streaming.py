@@ -223,11 +223,12 @@ streaming:
         assert cfg.streaming is not None
         assert cfg.streaming.update_interval_ms == 300
 
-    def test_none_when_not_configured(self, tmp_path):
+    def test_defaults_when_not_configured(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("port: 8000\n")
         cfg = load_config(config_file)
-        assert cfg.streaming is None
+        assert cfg.streaming.enabled is True
+        assert cfg.streaming.update_interval_ms == 500
 
 
 class TestChannelEditing:
