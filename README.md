@@ -99,6 +99,8 @@ Set a channel's token and the gateway enables it. This is the recommended approa
 | `A2A_SERVER_URL` | `http://localhost:8001` | Your A2A agent URL |
 | `GATEWAY_HOST` | `0.0.0.0` | Bind address |
 | `GATEWAY_PORT` | `8000` | Listen port |
+| `A2A_AUTH` | - | Auth mode: `google_id_token`, `google_access_token`, or `token` |
+| `A2A_AUTH_TOKEN` | - | Static bearer token (when `A2A_AUTH=token`) |
 
 **Slack:**
 
@@ -176,6 +178,40 @@ channels:
 ```
 
 YAML takes priority over env vars. You can mix both.
+
+### A2A authentication
+
+If your agent runs behind an auth proxy (e.g. Cloud Run), the gateway can attach credentials to every outbound request.
+
+**Google Cloud ID token** — for Cloud Run service-to-service. Uses Application Default Credentials to mint an ID token with the agent URL as audience:
+
+```yaml
+a2a:
+  server_url: "https://my-agent-xyz.run.app"
+  auth:
+    type: "google_id_token"
+```
+
+**Google Cloud access token** — for Google APIs or services that accept OAuth2 access tokens:
+
+```yaml
+a2a:
+  server_url: "https://my-agent-xyz.run.app"
+  auth:
+    type: "google_access_token"
+```
+
+**Static bearer token** — for agents behind a shared secret:
+
+```yaml
+a2a:
+  server_url: "https://my-agent.example.com"
+  auth:
+    type: "token"
+    token: "my-secret"
+```
+
+Or via env vars: `A2A_AUTH=token A2A_AUTH_TOKEN=my-secret`.
 
 ### What's on by default
 

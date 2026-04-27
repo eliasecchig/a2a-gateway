@@ -23,6 +23,8 @@ from typing import Any
 
 import httpx
 
+from gateway.core.auth import AuthProvider
+
 logger = logging.getLogger(__name__)
 
 _STREAM_READ_TIMEOUT = 300.0
@@ -67,17 +69,28 @@ def _build_params(
 class A2AClient:
     """Minimal A2A protocol client (JSON-RPC 2.0, message/send)."""
 
-    def __init__(self, server_url: str) -> None:
+    def __init__(
+        self,
+        server_url: str,
+        auth: AuthProvider | None = None,
+    ) -> None:
         self.server_url = server_url.rstrip("/")
         self._http = httpx.AsyncClient(timeout=60.0)
         self._request_id = itertools.count(1)
+        self._auth = auth
+
+    async def _auth_headers(self) -> dict[str, str]:
+        if self._auth is None:
+            return {}
+        return await self._auth.get_headers()
 
     async def close(self) -> None:
         await self._http.aclose()
 
     async def get_agent_card(self) -> dict[str, Any]:
         url = self.server_url.rstrip("/") + "/.well-known/agent.json"
-        resp = await self._http.get(url)
+        headers = await self._auth_headers()
+        resp = await self._http.get(url, headers=headers)
         resp.raise_for_status()
         return resp.json()
 
@@ -94,7 +107,8 @@ class A2AClient:
             "params": _build_params(text, context_id, task_id),
         }
 
-        resp = await self._http.post(self.server_url, json=payload)
+        headers = await self._auth_headers()
+        resp = await self._http.post(self.server_url, json=payload, headers=headers)
         resp.raise_for_status()
         body = resp.json()
 
@@ -116,10 +130,12 @@ class A2AClient:
             "params": _build_params(text, context_id, task_id),
         }
 
+        headers = await self._auth_headers()
         async with self._http.stream(
             "POST",
             self.server_url,
             json=payload,
+            headers=headers,
             timeout=httpx.Timeout(60.0, read=_STREAM_READ_TIMEOUT),
         ) as resp:
             resp.raise_for_status()

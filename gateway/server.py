@@ -24,6 +24,12 @@ from fastapi.responses import JSONResponse
 
 from gateway.config import GatewayConfig
 from gateway.core.a2a_client import A2AClient
+from gateway.core.auth import (
+    AuthProvider,
+    GoogleAccessTokenAuth,
+    GoogleIDTokenAuth,
+    StaticTokenAuth,
+)
 from gateway.core.chunking import ChunkConfig, ChunkMode
 from gateway.core.concurrency import ConcurrencyLimiter
 from gateway.core.debounce import DebounceConfig
@@ -45,9 +51,10 @@ def create_app(config: GatewayConfig) -> FastAPI:
     concurrency = _build_concurrency(config)
     typing = _build_typing(config)
     ack_cfg = _build_ack(config)
+    a2a_auth = _build_a2a_auth(config)
 
     router = Router(
-        A2AClient(config.a2a_server_url),
+        A2AClient(config.a2a_server_url, auth=a2a_auth),
         policy_checker=policy_checker,
         debounce_config=debounce_cfg,
         chunk_config=chunk_cfg,
@@ -192,6 +199,21 @@ def create_app(config: GatewayConfig) -> FastAPI:
         return base
 
     return app
+
+
+def _build_a2a_auth(config: GatewayConfig) -> AuthProvider | None:
+    a = config.a2a_auth
+    if not a or not a.type:
+        return None
+    if a.type == "google_id_token":
+        return GoogleIDTokenAuth(audience=config.a2a_server_url)
+    if a.type == "google_access_token":
+        return GoogleAccessTokenAuth(scopes=a.scopes if a.scopes else None)
+    if a.type == "token":
+        if not a.token:
+            raise ValueError("A2A auth type 'token' requires a token value")
+        return StaticTokenAuth(token=a.token)
+    raise ValueError(f"unknown A2A auth type: {a.type!r}")
 
 
 def _build_ack(config: GatewayConfig) -> dict[str, dict] | None:

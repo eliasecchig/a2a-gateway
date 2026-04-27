@@ -260,3 +260,50 @@ class TestEnvOverrides:
         assert cfg.email_accounts[0].smtp_host == "smtp.example.com"
         assert cfg.email_accounts[0].smtp_port == 465
         assert cfg.email_accounts[0].from_address == "bot@example.com"
+
+    def test_a2a_auth_from_env(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("A2A_AUTH", "token")
+        monkeypatch.setenv("A2A_AUTH_TOKEN", "my-secret")
+        cfg = load_config(tmp_path / "nope.yaml")
+        assert cfg.a2a_auth is not None
+        assert cfg.a2a_auth.type == "token"
+        assert cfg.a2a_auth.token == "my-secret"
+
+    def test_a2a_auth_google_id_token_from_env(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("A2A_AUTH", "google_id_token")
+        cfg = load_config(tmp_path / "nope.yaml")
+        assert cfg.a2a_auth is not None
+        assert cfg.a2a_auth.type == "google_id_token"
+
+
+class TestA2AAuthConfig:
+    def test_auth_from_yaml(self, tmp_path: Path):
+        data = {
+            "a2a": {
+                "server_url": "https://agent.run.app",
+                "auth": {"type": "google_id_token"},
+            }
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert cfg.a2a_auth is not None
+        assert cfg.a2a_auth.type == "google_id_token"
+        assert cfg.a2a_server_url == "https://agent.run.app"
+
+    def test_static_token_from_yaml(self, tmp_path: Path):
+        data = {
+            "a2a": {
+                "auth": {"type": "token", "token": "secret-123"},
+            }
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert cfg.a2a_auth is not None
+        assert cfg.a2a_auth.type == "token"
+        assert cfg.a2a_auth.token == "secret-123"
+
+    def test_no_auth_by_default(self, tmp_path: Path):
+        cfg = load_config(tmp_path / "nope.yaml")
+        assert cfg.a2a_auth is None

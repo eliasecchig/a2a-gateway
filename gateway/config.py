@@ -192,12 +192,20 @@ class GroupPoliciesConfig:
     discord: GroupPolicyEntry = field(default_factory=GroupPolicyEntry)
 
 
+@dataclass
+class A2AAuthConfig:
+    type: str = ""
+    token: str = ""
+    scopes: list[str] = field(default_factory=list)
+
+
 # --- Top-level config ---
 
 
 @dataclass
 class GatewayConfig:
     a2a_server_url: str = "http://localhost:8001"
+    a2a_auth: A2AAuthConfig | None = None
     host: str = "0.0.0.0"
     port: int = 8000
 
@@ -235,6 +243,7 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
 
     cfg = GatewayConfig(
         a2a_server_url=a2a.get("server_url", "http://localhost:8001"),
+        a2a_auth=_build_optional(A2AAuthConfig, a2a.get("auth")),
         host=raw.get("host", "0.0.0.0"),
         port=raw.get("port", 8000),
         slack_accounts=_parse_accounts(SlackAccountConfig, channels.get("slack")),
@@ -273,6 +282,12 @@ def _apply_env_overrides(cfg: GatewayConfig) -> None:
 
     if val := env("A2A_SERVER_URL"):
         cfg.a2a_server_url = val
+    if auth_type := env("A2A_AUTH"):
+        if cfg.a2a_auth is None:
+            cfg.a2a_auth = A2AAuthConfig()
+        cfg.a2a_auth.type = auth_type
+        if token := env("A2A_AUTH_TOKEN"):
+            cfg.a2a_auth.token = token
     if val := env("GATEWAY_HOST"):
         cfg.host = val
     if val := env("GATEWAY_PORT"):
