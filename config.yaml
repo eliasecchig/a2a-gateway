@@ -1,0 +1,82 @@
+a2a:
+  server_url: "http://localhost:8001"
+
+host: "0.0.0.0"
+port: 8000
+
+# --- Feature configs (all optional — omit to disable) ---
+
+# chunking:
+#   mode: "newline"       # "length" or "newline"
+#   default_limit: 4000
+
+# debounce:
+#   window_ms: 500
+#   max_messages: 10
+#   max_chars: 4000
+
+# rate_limiting:
+#   a2a:
+#     max_requests: 60
+#     window_seconds: 60
+#   channel:
+#     max_requests: 30
+#     window_seconds: 60
+#   backoff:
+#     initial: 1.0
+#     factor: 2.0
+#     max_delay: 300
+#     max_retries: 5
+
+# group_policies:
+#   slack:
+#     mode: "mention_only"  # "open", "mention_only", "disabled"
+#     overrides:
+#       "C12345": "open"    # per-group override by conversation ID
+#   whatsapp:
+#     mode: "open"
+#   google_chat:
+#     mode: "mention_only"
+#   email:
+#     mode: "open"
+
+# --- Channel configs ---
+# Each channel supports single-account (dict) or multi-account (list) format.
+
+channels:
+  slack:
+    enabled: false
+    bot_token: "xoxb-your-bot-token"
+    app_token: "xapp-your-app-token"
+
+  # Multi-account example:
+  # slack:
+  #   - account_id: "workspace_a"
+  #     enabled: true
+  #     bot_token: "xoxb-aaa"
+  #     app_token: "xapp-aaa"
+  #   - account_id: "workspace_b"
+  #     enabled: true
+  #     bot_token: "xoxb-bbb"
+  #     app_token: "xapp-bbb"
+
+  whatsapp:
+    enabled: false
+    verify_token: "my-verify-token"
+    access_token: "EAAG..."
+    phone_number_id: "123456789"
+    app_secret: ""
+
+  google_chat:
+    enabled: false
+    service_account_path: "service-account.json"
+
+  email:
+    enabled: false
+    listen_host: "localhost"
+    listen_port: 1025
+    smtp_host: "localhost"
+    smtp_port: 587
+    from_address: "agent@example.com"
+    smtp_user: ""
+    smtp_password: ""

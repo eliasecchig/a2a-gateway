@@ -1,0 +1,117 @@
+[project]
+name = "a2a-gateway"
+version = "0.1.0"
+description = "Multi-channel A2A gateway — connect Slack, WhatsApp, Google Chat, and Email to any A2A-compliant agent"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "Apache-2.0"}
+authors = [{name = "Google LLC"}]
+keywords = ["a2a", "agent", "gateway", "slack", "whatsapp", "google-chat", "email", "multi-channel"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Communications :: Chat",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.34",
+    "httpx>=0.28",
+    "slack-bolt>=1.21",
+    "google-auth>=2.38",
+    "google-api-python-client>=2.160",
+    "aiosmtpd>=1.4",
+    "pyyaml>=6.0",
+    "google-adk[a2a]>=1.0",
+    "a2a-sdk[http-server]==0.3.26",
+]
+
+[project.urls]
+Homepage = "https://github.com/eliasecchig/a2a-gateway"
+Repository = "https://github.com/eliasecchig/a2a-gateway"
+Issues = "https://github.com/eliasecchig/a2a-gateway/issues"
+
+[project.scripts]
+a2a-gateway = "run:main"
+
+[project.optional-dependencies]
+telegram = ["python-telegram-bot>=21"]
+discord = ["discord.py>=2.4"]
+lint = [
+    "ruff>=0.11",
+    "ty>=0.0.1a7",
+    "codespell>=2.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+    "respx>=0.22",
+    "a2a-gateway[lint]",
+]
+
+[tool.ruff]
+line-length = 90
+target-version = "py312"
+include = ["gateway/**/*.py", "agent/**/*.py", "tests/**/*.py", "run.py"]
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff specific rules
+    "SIM", # flake8-simplify
+    "T20", # flake8-print (no print() in library code)
+    "PLR0917", # too-many-positional-params (max 5)
+    "PLW1514", # unspecified-encoding (require encoding in open calls)
+]
+ignore = ["E501", "C901", "RUF001", "UP036", "UP047", "RUF067", "RUF069", "RUF029"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gateway", "agent"]
+
+[tool.ruff.lint.pylint]
+max-positional-args = 5
+
+[tool.ty]
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+
+[[tool.ty.overrides]]
+include = ["tests/**"]
+[tool.ty.overrides.rules]
+invalid-return-type = "ignore"
+
+[tool.codespell]
+skip = "uv.lock,.venv,venv,**/*.ipynb"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-m 'not live' --strict-markers"
+markers = [
+    "live: marks tests that hit real external services (deselect with '-m \"not live\"')",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:audioop",
+    "ignore::DeprecationWarning:discord.player",
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+]
