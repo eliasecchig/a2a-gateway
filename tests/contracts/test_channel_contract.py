@@ -8,11 +8,21 @@ import pytest
 from gateway.channels.email import EmailAdapter
 from gateway.channels.whatsapp import WhatsAppAdapter
 from gateway.core.channel import ChannelAdapter
-from gateway.core.types import InboundMessage
+from gateway.core.simple_channel import SimpleChannel
+from gateway.core.types import InboundMessage, OutboundMessage
+
+
+class _ContractStubChannel(SimpleChannel):
+    channel_type = "contract_stub"
+
+    async def send(self, message: OutboundMessage) -> str | None:
+        return None
 
 
 def _make_adapters() -> list[tuple[str, ChannelAdapter]]:
     adapters: list[tuple[str, ChannelAdapter]] = []
+
+    adapters.append(("contract_stub", _ContractStubChannel()))
 
     adapters.append(("email", EmailAdapter()))
 
@@ -52,7 +62,7 @@ def _make_adapters() -> list[tuple[str, ChannelAdapter]]:
     return adapters
 
 
-@pytest.fixture(params=["email", "whatsapp", "slack", "google_chat"])
+@pytest.fixture(params=["contract_stub", "email", "whatsapp", "slack", "google_chat"])
 def adapter(request: pytest.FixtureRequest) -> ChannelAdapter:
     adapters = _make_adapters()
     lookup = dict(adapters)
@@ -159,3 +169,11 @@ class TestChannelContract:
                 service_account_path="fake.json", account_id="org1"
             )
             assert adapter.name == "google_chat:org1"
+
+    def test_simple_channel_default_name(self):
+        ch = _ContractStubChannel()
+        assert ch.name == "contract_stub"
+
+    def test_simple_channel_custom_account_name(self):
+        ch = _ContractStubChannel(account_id="custom")
+        assert ch.name == "contract_stub:custom"

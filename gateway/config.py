@@ -99,6 +99,15 @@ class EmailAccountConfig:
     features: dict[str, bool] = field(default_factory=dict)
 
 
+@dataclass
+class CustomChannelConfig:
+    class_path: str = ""
+    account_id: str = "default"
+    enabled: bool = True
+    kwargs: dict[str, Any] = field(default_factory=dict)
+    features: dict[str, bool] = field(default_factory=dict)
+
+
 # --- Feature configs ---
 
 
@@ -227,6 +236,7 @@ class GatewayConfig:
     discord_accounts: list[DiscordAccountConfig] = field(default_factory=list)
     telegram_accounts: list[TelegramAccountConfig] = field(default_factory=list)
     email_accounts: list[EmailAccountConfig] = field(default_factory=list)
+    custom_channels: list[CustomChannelConfig] = field(default_factory=list)
 
     chunking: ChunkingConfig = field(default_factory=ChunkingConfig)
     debounce: DebounceConfig = field(default_factory=DebounceConfig)
@@ -270,6 +280,11 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
             TelegramAccountConfig, channels.get("telegram")
         ),
         email_accounts=_parse_accounts(EmailAccountConfig, channels.get("email")),
+        custom_channels=[
+            cc
+            for entry in raw.get("custom_channels", [])
+            if (cc := _build(CustomChannelConfig, entry)).enabled
+        ],
         chunking=_build_with_defaults(ChunkingConfig, raw.get("chunking")),
         debounce=_build_with_defaults(DebounceConfig, raw.get("debounce")),
         rate_limiting=_parse_rate_limiting(raw.get("rate_limiting", {})),

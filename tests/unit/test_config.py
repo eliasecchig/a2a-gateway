@@ -368,3 +368,90 @@ class TestA2AAuthConfig:
     def test_no_auth_by_default(self, tmp_path: Path):
         cfg = load_config(tmp_path / "nope.yaml")
         assert cfg.a2a_auth is None
+
+
+class TestCustomChannelConfig:
+    def test_empty_by_default(self, tmp_path: Path):
+        cfg = load_config(tmp_path / "nope.yaml")
+        assert cfg.custom_channels == []
+
+    def test_single_custom_channel(self, tmp_path: Path):
+        data = {
+            "custom_channels": [
+                {
+                    "class_path": "my_package.MyChatChannel",
+                    "account_id": "prod",
+                    "kwargs": {"api_key": "sk-123"},
+                    "features": {"typing": False},
+                }
+            ]
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert len(cfg.custom_channels) == 1
+        cc = cfg.custom_channels[0]
+        assert cc.class_path == "my_package.MyChatChannel"
+        assert cc.account_id == "prod"
+        assert cc.kwargs == {"api_key": "sk-123"}
+        assert cc.features == {"typing": False}
+
+    def test_multiple_custom_channels(self, tmp_path: Path):
+        data = {
+            "custom_channels": [
+                {
+                    "class_path": "pkg.ChannelA",
+                    "kwargs": {"token": "a"},
+                },
+                {
+                    "class_path": "pkg.ChannelB",
+                    "kwargs": {"token": "b"},
+                },
+            ]
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert len(cfg.custom_channels) == 2
+        assert cfg.custom_channels[0].class_path == "pkg.ChannelA"
+        assert cfg.custom_channels[1].class_path == "pkg.ChannelB"
+
+    def test_custom_channel_defaults(self, tmp_path: Path):
+        data = {
+            "custom_channels": [
+                {"class_path": "pkg.MyChannel"},
+            ]
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        cc = cfg.custom_channels[0]
+        assert cc.account_id == "default"
+        assert cc.kwargs == {}
+        assert cc.features == {}
+
+    def test_custom_channels_absent_from_yaml(self, tmp_path: Path):
+        data = {"a2a": {"server_url": "http://agent:9000"}}
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert cfg.custom_channels == []
+
+    def test_disabled_custom_channel_filtered(self, tmp_path: Path):
+        data = {
+            "custom_channels": [
+                {
+                    "class_path": "pkg.Active",
+                    "enabled": True,
+                },
+                {
+                    "class_path": "pkg.Disabled",
+                    "enabled": False,
+                },
+            ]
+        }
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump(data))
+        cfg = load_config(p)
+        assert len(cfg.custom_channels) == 1
+        assert cfg.custom_channels[0].class_path == "pkg.Active"
