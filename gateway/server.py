@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -30,6 +31,7 @@ from gateway.core.auth import (
     GoogleIDTokenAuth,
     StaticTokenAuth,
 )
+from gateway.core.channel import ChannelAdapter
 from gateway.core.chunking import ChunkConfig, ChunkMode
 from gateway.core.concurrency import ConcurrencyLimiter
 from gateway.core.debounce import DebounceConfig
@@ -42,7 +44,10 @@ from gateway.core.typing_indicator import TypingIndicator
 logger = logging.getLogger(__name__)
 
 
-def create_app(config: GatewayConfig) -> FastAPI:
+def create_app(
+    config: GatewayConfig,
+    custom_channels: list[ChannelAdapter] | None = None,
+) -> FastAPI:
     policy_checker = _build_policy_checker(config)
     debounce_cfg = _build_debounce(config)
     chunk_cfg = _build_chunk(config)
@@ -168,6 +173,32 @@ def create_app(config: GatewayConfig) -> FastAPI:
             context_template=acct.context_template,
             context_enabled=acct.context_enabled,
         )
+
+    for custom in config.custom_channels:
+        if "." not in custom.class_path:
+            raise ValueError(
+                f"custom channel class_path must be a dotted path,"
+                f" got: {custom.class_path!r}"
+            )
+        module_path, class_name = custom.class_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        cls = getattr(module, class_name, None)
+        if cls is None:
+            raise ImportError(
+                f"{custom.class_path}: {class_name!r} not found in module {module_path!r}"
+            )
+        if not (isinstance(cls, type) and issubclass(cls, ChannelAdapter)):
+            raise TypeError(f"{custom.class_path} is not a ChannelAdapter subclass")
+        adapter = cls(account_id=custom.account_id, **custom.kwargs)
+        router.register(adapter, features=custom.features)
+        if hasattr(adapter, "router"):
+            webhook_adapters.append(adapter)
+
+    if custom_channels:
+        for adapter in custom_channels:
+            router.register(adapter)
+            if hasattr(adapter, "router"):
+                webhook_adapters.append(adapter)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

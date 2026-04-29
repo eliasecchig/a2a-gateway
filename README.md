@@ -4,18 +4,19 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
-A gateway that connects any [A2A protocol](https://google.github.io/A2A/) agent to Slack, WhatsApp, Google Chat, Email, Telegram, and Discord. You build the agent, the gateway handles the channels.
+A gateway that connects any [A2A protocol](https://google.github.io/A2A/) agent to Slack, WhatsApp, Google Chat, Email, Telegram, Discord, and your own custom channels. You build the agent, the gateway handles the channels.
 
 ```
     Slack ──┐                        ┌─────────────────────┐
  WhatsApp ──┤                        │   Your A2A Agent    │
-   G Chat ──┼──▶  a2a-gateway  ──A2A─┤   (ADK, LangGraph,  │
-    Email ──┤                        │    CrewAI, custom…) │
+   G Chat ──┤                        │   (ADK, LangGraph,  │
+    Email ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
  Telegram ──┤                        └─────────────────────┘
-  Discord ──┘
+  Discord ──┤
+  Custom ──┘
 ```
 
-Adding a channel is mostly just setting env vars. The gateway takes care of message chunking, rate limiting, retries, debouncing, typing indicators, streaming responses, and per-channel markdown formatting. Everything is opt-in: if you don't configure a feature, it doesn't run.
+Adding a built-in channel is mostly just setting env vars. Need a platform we don't support? Subclass `SimpleChannel`, implement one method, and you're in. The gateway takes care of message chunking, rate limiting, retries, debouncing, typing indicators, streaming responses, and per-channel markdown formatting. Everything is opt-in: if you don't configure a feature, it doesn't run.
 
 ## Quick start
 
@@ -63,6 +64,73 @@ The gateway starts on `http://localhost:8000`.
 | Discord | Gateway (websocket) | No | Yes | Yes |
 
 All channels use official APIs.
+
+## Custom channels
+
+Need a platform we don't cover? Subclass `SimpleChannel`, implement `send()`, and feed inbound messages to `dispatch()`. Your channel gets the full pipeline — rate limiting, chunking, debounce, streaming, typing indicators — for free.
+
+```python
+from gateway.ext import SimpleChannel, InboundMessage, OutboundMessage
+
+class RocketChatChannel(SimpleChannel):
+    channel_type = "rocketchat"
+
+    async def send(self, message: OutboundMessage) -> str | None:
+        # Send the response to your platform
+        resp = await self.http.post(f"{self.base_url}/api/v1/chat.sendMessage", json={
+            "channel": message.conversation_id,
+            "text": message.text,
+        })
+        return resp.json().get("message", {}).get("_id")
+```
+
+### Registration
+
+**Programmatic** — pass instances directly when creating the app:
+
+```python
+from gateway.config import load_config
+from gateway.server import create_app
+
+config = load_config()
+app = create_app(config, custom_channels=[
+    RocketChatChannel(account_id="prod"),
+])
+```
+
+**YAML** — declare the dotted class path in `config.yaml` and the gateway imports it at startup:
+
+```yaml
+custom_channels:
+  - class_path: "my_package.RocketChatChannel"
+    account_id: "prod"
+    kwargs:
+      base_url: "https://chat.example.com"
+    features:
+      typing: true
+```
+
+Kwargs are forwarded to `__init__`. Per-channel features can be toggled individually.
+
+### Inbound messages
+
+To receive messages, start a listener in `start()` and call `self.dispatch()`:
+
+```python
+async def start(self) -> None:
+    self._task = asyncio.create_task(self._poll())
+
+async def _poll(self) -> None:
+    async for event in self.client.stream():
+        await self.dispatch(InboundMessage(
+            channel="rocketchat",
+            conversation_id=event.room_id,
+            sender_id=event.user_id,
+            text=event.text,
+        ))
+```
+
+For webhook-based channels, add a `self.router = APIRouter(...)` — the gateway includes it automatically.
 
 ## Pipeline
 

@@ -100,3 +100,16 @@ channels:
     smtp_password: ""
     # context_template: "User is on {channel}. Max {max_length} chars."
     # context_enabled: true   # set false to suppress channel context prefix
+
+# --- Custom channels ---
+# Bring your own channel by subclassing SimpleChannel.
+# See README for a full example.
+
+# custom_channels:
+#   - class_path: "my_package.MyChannel"
+#     account_id: "default"
+#     kwargs:
+#       api_key: "sk-..."
+#       base_url: "https://chat.example.com"
+#     features:
+#       typing: true
