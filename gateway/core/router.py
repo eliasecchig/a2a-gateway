@@ -281,7 +281,7 @@ class Router:
         adapter: ChannelAdapter,
         log_extra: dict[str, str],
         *,
-        text: str | None = None,
+        text: str,
     ) -> None:
         t0 = time.monotonic()
         interval_s = (self._streaming_update_interval_ms or 500) / 1000.0
@@ -292,7 +292,7 @@ class Router:
 
         try:
             async for event in self.a2a.send_message_stream(
-                text=text if text is not None else msg.text,
+                text=text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             ):
@@ -397,7 +397,7 @@ class Router:
         session_key: str,
         log_extra: dict[str, str],
         *,
-        text: str | None = None,
+        text: str,
     ) -> tuple[A2AResponse, float] | None:
         retry = self._get_retry(msg.channel)
 
@@ -405,7 +405,7 @@ class Router:
             t0 = time.monotonic()
             resp = await retry.execute(
                 self.a2a.send_message,
-                text=text if text is not None else msg.text,
+                text=text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             )
