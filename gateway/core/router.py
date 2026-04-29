@@ -22,6 +22,7 @@ from gateway.core.capabilities import AgentCapabilities, CapabilityDiscovery
 from gateway.core.channel import ChannelAdapter
 from gateway.core.chunking import ChunkConfig, MessageChunker
 from gateway.core.concurrency import ConcurrencyLimiter
+from gateway.core.context import ChannelContextInjector
 from gateway.core.debounce import DebounceConfig, Debouncer
 from gateway.core.health import HealthMonitor
 from gateway.core.markdown import get_markdown_adapter
@@ -88,12 +89,21 @@ class Router:
         if debounce_config:
             self._debouncer = Debouncer(debounce_config, self._handle_inner)
 
+        self._context_injector = ChannelContextInjector()
+
     def register(
         self,
         adapter: ChannelAdapter,
         *,
         features: dict[str, bool] | None = None,
+        context_template: str = "",
+        context_enabled: bool = True,
     ) -> None:
+        self._context_injector.register(
+            adapter.name,
+            template=context_template,
+            enabled=context_enabled,
+        )
         if features:
             self._account_features[adapter.name] = features
 
@@ -163,6 +173,7 @@ class Router:
 
         session_key = f"{msg.channel}:{msg.conversation_id or msg.sender_id}"
         session = self._session_store.get(session_key)
+        text = self._context_injector.inject(msg.text, msg.channel, session)
         base_ch = self._base_channel(msg.channel)
 
         if self._health:
@@ -201,11 +212,17 @@ class Router:
             if use_streaming:
                 assert adapter is not None
                 await self._handle_streaming(
-                    msg, session, session_key, base_ch, adapter, log_extra
+                    msg,
+                    session,
+                    session_key,
+                    base_ch,
+                    adapter,
+                    log_extra,
+                    text=text,
                 )
                 return
 
-            result = await self._call_a2a(msg, session, session_key, log_extra)
+            result = await self._call_a2a(msg, session, session_key, log_extra, text=text)
         finally:
             if self._typing:
                 await self._typing.stop(session_key)
@@ -263,6 +280,8 @@ class Router:
         base_ch: str,
         adapter: ChannelAdapter,
         log_extra: dict[str, str],
+        *,
+        text: str | None = None,
     ) -> None:
         t0 = time.monotonic()
         interval_s = (self._streaming_update_interval_ms or 500) / 1000.0
@@ -273,7 +292,7 @@ class Router:
 
         try:
             async for event in self.a2a.send_message_stream(
-                text=msg.text,
+                text=text or msg.text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             ):
@@ -377,6 +396,8 @@ class Router:
         session: SessionState,
         session_key: str,
         log_extra: dict[str, str],
+        *,
+        text: str | None = None,
     ) -> tuple[A2AResponse, float] | None:
         retry = self._get_retry(msg.channel)
 
@@ -384,7 +405,7 @@ class Router:
             t0 = time.monotonic()
             resp = await retry.execute(
                 self.a2a.send_message,
-                text=msg.text,
+                text=text or msg.text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             )
