@@ -276,6 +276,67 @@ class TestEnvOverrides:
         assert cfg.a2a_auth.type == "google_id_token"
 
 
+class TestChannelContextConfig:
+    def test_slack_context_fields_default(self):
+        from gateway.config import SlackAccountConfig
+
+        cfg = SlackAccountConfig()
+        assert cfg.context_template == ""
+        assert cfg.context_enabled is True
+
+    def test_slack_context_fields_from_yaml(self):
+        from unittest.mock import mock_open, patch
+
+        from gateway.config import load_config
+
+        yaml_content = """
+channels:
+  slack:
+    enabled: true
+    bot_token: "xoxb-test"
+    app_token: "xapp-test"
+    context_template: "Custom {channel} prefix"
+    context_enabled: false
+"""
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", mock_open(read_data=yaml_content)),
+        ):
+            cfg = load_config("test.yaml")
+
+        assert len(cfg.slack_accounts) == 1
+        assert cfg.slack_accounts[0].context_template == "Custom {channel} prefix"
+        assert cfg.slack_accounts[0].context_enabled is False
+
+    def test_all_account_configs_have_context_fields(self):
+        from gateway.config import (
+            DiscordAccountConfig,
+            EmailAccountConfig,
+            GoogleChatAccountConfig,
+            SlackAccountConfig,
+            TelegramAccountConfig,
+            WhatsAppAccountConfig,
+        )
+
+        for cls in [
+            SlackAccountConfig,
+            WhatsAppAccountConfig,
+            GoogleChatAccountConfig,
+            DiscordAccountConfig,
+            TelegramAccountConfig,
+            EmailAccountConfig,
+        ]:
+            instance = cls()
+            assert hasattr(instance, "context_template"), (
+                f"{cls.__name__} missing context_template"
+            )
+            assert hasattr(instance, "context_enabled"), (
+                f"{cls.__name__} missing context_enabled"
+            )
+            assert instance.context_template == ""
+            assert instance.context_enabled is True
+
+
 class TestA2AAuthConfig:
     def test_auth_from_yaml(self, tmp_path: Path):
         data = {

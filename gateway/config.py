@@ -34,6 +34,8 @@ class SlackAccountConfig:
     enabled: bool = False
     bot_token: str = ""
     app_token: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 
@@ -45,6 +47,8 @@ class WhatsAppAccountConfig:
     access_token: str = ""
     phone_number_id: str = ""
     app_secret: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 
@@ -54,6 +58,8 @@ class GoogleChatAccountConfig:
     enabled: bool = False
     service_account_path: str = ""
     verification_token: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 
@@ -62,6 +68,8 @@ class DiscordAccountConfig:
     account_id: str = "default"
     enabled: bool = False
     bot_token: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 
@@ -70,6 +78,8 @@ class TelegramAccountConfig:
     account_id: str = "default"
     enabled: bool = False
     bot_token: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 
@@ -84,6 +94,8 @@ class EmailAccountConfig:
     from_address: str = "agent@example.com"
     smtp_user: str = ""
     smtp_password: str = ""
+    context_template: str = ""
+    context_enabled: bool = True
     features: dict[str, bool] = field(default_factory=dict)
 
 

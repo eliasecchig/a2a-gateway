@@ -86,6 +86,8 @@ def create_app(config: GatewayConfig) -> FastAPI:
                 account_id=acct.account_id,
             ),
             features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
         )
 
     for acct in config.whatsapp_accounts:
@@ -98,7 +100,12 @@ def create_app(config: GatewayConfig) -> FastAPI:
             app_secret=acct.app_secret,
             account_id=acct.account_id,
         )
-        router.register(adapter, features=acct.features)
+        router.register(
+            adapter,
+            features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
+        )
         webhook_adapters.append(adapter)
 
     for acct in config.google_chat_accounts:
@@ -109,7 +116,12 @@ def create_app(config: GatewayConfig) -> FastAPI:
             account_id=acct.account_id,
             verification_token=acct.verification_token,
         )
-        router.register(adapter, features=acct.features)
+        router.register(
+            adapter,
+            features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
+        )
         webhook_adapters.append(adapter)
 
     for acct in config.discord_accounts:
@@ -121,6 +133,8 @@ def create_app(config: GatewayConfig) -> FastAPI:
                 account_id=acct.account_id,
             ),
             features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
         )
 
     for acct in config.telegram_accounts:
@@ -132,6 +146,8 @@ def create_app(config: GatewayConfig) -> FastAPI:
                 account_id=acct.account_id,
             ),
             features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
         )
 
     for acct in config.email_accounts:
@@ -149,6 +165,8 @@ def create_app(config: GatewayConfig) -> FastAPI:
                 account_id=acct.account_id,
             ),
             features=acct.features,
+            context_template=acct.context_template,
+            context_enabled=acct.context_enabled,
         )
 
     @asynccontextmanager

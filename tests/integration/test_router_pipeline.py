@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -173,8 +174,6 @@ class TestRouterPipeline:
         await router._handle_inner(_msg())
         await router._handle_inner(_msg())
 
-        import json
-
         second_req = json.loads(route.calls[1].request.content)
         assert second_req["params"]["message"]["contextId"] == "c1"
         assert second_req["params"]["message"]["taskId"] == "t1"
@@ -249,4 +248,80 @@ class TestRouterPipeline:
         a2a_acq.assert_called_once()
         ch_acq.assert_called_once()
         assert len(adapter.sent) == 1
+        await client.close()
+
+    @respx.mock
+    async def test_context_injection_first_message(self):
+        route = respx.post(A2A_URL).mock(
+            return_value=Response(
+                200,
+                json=_a2a_result(context_id="c1", task_id="t1"),
+            )
+        )
+        client = A2AClient(A2A_URL)
+        router = Router(client, backoff_config=BackoffConfig(max_retries=0))
+        adapter = MockAdapter(channel_name="slack")
+        router.register(adapter, context_enabled=True)
+
+        await router._handle_inner(_msg(channel="slack"))
+
+        req_body = json.loads(route.calls[0].request.content)
+        sent_text = req_body["params"]["message"]["parts"][0]["text"]
+        assert sent_text.startswith("[Channel: Slack")
+        assert "hi" in sent_text
+        await client.close()
+
+    @respx.mock
+    async def test_context_injection_skipped_on_second_message(self):
+        route = respx.post(A2A_URL).mock(
+            return_value=Response(
+                200,
+                json=_a2a_result(context_id="c1", task_id="t1"),
+            )
+        )
+        client = A2AClient(A2A_URL)
+        router = Router(client, backoff_config=BackoffConfig(max_retries=0))
+        adapter = MockAdapter(channel_name="slack")
+        router.register(adapter, context_enabled=True)
+
+        await router._handle_inner(_msg(channel="slack"))
+        await router._handle_inner(_msg(channel="slack"))
+
+        req_body_2 = json.loads(route.calls[1].request.content)
+        sent_text_2 = req_body_2["params"]["message"]["parts"][0]["text"]
+        assert not sent_text_2.startswith("[Channel:")
+        assert sent_text_2 == "hi"
+        await client.close()
+
+    @respx.mock
+    async def test_context_injection_disabled(self):
+        route = respx.post(A2A_URL).mock(return_value=Response(200, json=_a2a_result()))
+        client = A2AClient(A2A_URL)
+        router = Router(client, backoff_config=BackoffConfig(max_retries=0))
+        adapter = MockAdapter(channel_name="slack")
+        router.register(adapter, context_enabled=False)
+
+        await router._handle_inner(_msg(channel="slack"))
+
+        req_body = json.loads(route.calls[0].request.content)
+        sent_text = req_body["params"]["message"]["parts"][0]["text"]
+        assert sent_text == "hi"
+        await client.close()
+
+    @respx.mock
+    async def test_context_injection_custom_template(self):
+        route = respx.post(A2A_URL).mock(return_value=Response(200, json=_a2a_result()))
+        client = A2AClient(A2A_URL)
+        router = Router(client, backoff_config=BackoffConfig(max_retries=0))
+        adapter = MockAdapter(channel_name="slack")
+        router.register(
+            adapter,
+            context_template="Platform: {channel}",
+        )
+
+        await router._handle_inner(_msg(channel="slack"))
+
+        req_body = json.loads(route.calls[0].request.content)
+        sent_text = req_body["params"]["message"]["parts"][0]["text"]
+        assert sent_text == "Platform: Slack\n\nhi"
         await client.close()

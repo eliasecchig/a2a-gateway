@@ -48,6 +48,8 @@ channels:
     enabled: false
     bot_token: "xoxb-your-bot-token"
     app_token: "xapp-your-app-token"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
 
   # Multi-account example:
   # slack:
@@ -66,10 +68,26 @@ channels:
     access_token: "EAAG..."
     phone_number_id: "123456789"
     app_secret: ""
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
 
   google_chat:
     enabled: false
     service_account_path: "service-account.json"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
+
+  discord:
+    enabled: false
+    bot_token: "your-discord-bot-token"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
+
+  telegram:
+    enabled: false
+    bot_token: "your-telegram-bot-token"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
 
   email:
     enabled: false
@@ -80,3 +98,5 @@ channels:
     from_address: "agent@example.com"
     smtp_user: ""
     smtp_password: ""
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
