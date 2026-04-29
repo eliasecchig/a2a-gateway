@@ -77,6 +77,18 @@ channels:
     # context_template: "User is on {channel}. Max {max_length} chars."
     # context_enabled: true   # set false to suppress channel context prefix
 
+  discord:
+    enabled: false
+    bot_token: "your-discord-bot-token"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
+
+  telegram:
+    enabled: false
+    bot_token: "your-telegram-bot-token"
+    # context_template: "User is on {channel}. Max {max_length} chars."
+    # context_enabled: true   # set false to suppress channel context prefix
+
   email:
     enabled: false
     listen_host: "localhost"

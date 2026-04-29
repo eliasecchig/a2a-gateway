@@ -89,11 +89,17 @@ class ChannelContextInjector:
                 else _DEFAULT_TEMPLATE_NO_LIMIT
             )
 
-        rendered = template.format_map(
-            {
-                "channel": meta.display_name,
-                "supports": ", ".join(meta.supports),
-                "max_length": meta.max_message_length,
-            }
-        )
+        try:
+            rendered = template.format_map(
+                {
+                    "channel": meta.display_name,
+                    "supports": ", ".join(meta.supports),
+                    "max_length": meta.max_message_length,
+                }
+            )
+        except KeyError:
+            logger.warning(
+                "bad context_template for %s, skipping", channel
+            )
+            return text
         return f"{rendered}\n\n{text}"

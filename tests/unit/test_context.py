@@ -101,3 +101,12 @@ class TestChannelContextInjector:
         result = injector.inject("hello", "unknown_platform", session)
 
         assert result == "hello"
+
+    def test_bad_template_skips_injection(self) -> None:
+        injector = ChannelContextInjector()
+        injector.register("slack", template="{channel} {unknown_var}")
+        session = SessionState()
+
+        result = injector.inject("hello", "slack", session)
+
+        assert result == "hello"

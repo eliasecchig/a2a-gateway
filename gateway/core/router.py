@@ -292,7 +292,7 @@ class Router:
 
         try:
             async for event in self.a2a.send_message_stream(
-                text=text or msg.text,
+                text=text if text is not None else msg.text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             ):
@@ -405,7 +405,7 @@ class Router:
             t0 = time.monotonic()
             resp = await retry.execute(
                 self.a2a.send_message,
-                text=text or msg.text,
+                text=text if text is not None else msg.text,
                 context_id=session.context_id,
                 task_id=session.task_id,
             )
