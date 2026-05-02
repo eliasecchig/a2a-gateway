@@ -18,6 +18,7 @@ from gateway.config import (
     WhatsAppAccountConfig,
 )
 from gateway.server import create_app
+from tests.helpers.mock_adapter import MockAdapter
 
 
 @pytest.mark.asyncio
@@ -225,3 +226,79 @@ class TestServer:
             resp = await client.get("/health")
             assert resp.status_code == 200
             assert "whatsapp" in resp.json()["channels"]
+
+
+@pytest.mark.asyncio
+class TestPush:
+    async def test_push_sends_to_adapter(self):
+        adapter = MockAdapter(channel_name="test")
+        app = create_app(GatewayConfig(), custom_channels=[adapter])
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/push",
+                json={
+                    "channel": "test",
+                    "recipient_id": "U123",
+                    "text": "weekly nudge!",
+                },
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "sent"
+        assert len(adapter.sent) == 1
+        msg = adapter.sent[0]
+        assert msg.channel == "test"
+        assert msg.recipient_id == "U123"
+        assert msg.text == "weekly nudge!"
+
+    async def test_push_unknown_channel_returns_404(self):
+        app = create_app(GatewayConfig())
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/push",
+                json={
+                    "channel": "nonexistent",
+                    "recipient_id": "U1",
+                    "text": "hi",
+                },
+            )
+        assert resp.status_code == 404
+        data = resp.json()
+        assert "nonexistent" in data["error"]
+        assert "available" in data
+
+    async def test_push_missing_fields_returns_422(self):
+        app = create_app(GatewayConfig())
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/push",
+                json={"channel": "test"},
+            )
+        assert resp.status_code == 422
+
+    async def test_push_with_thread_id(self):
+        adapter = MockAdapter(channel_name="test")
+        app = create_app(GatewayConfig(), custom_channels=[adapter])
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/push",
+                json={
+                    "channel": "test",
+                    "recipient_id": "U123",
+                    "text": "hello",
+                    "thread_id": "T456",
+                    "conversation_id": "C789",
+                },
+            )
+        assert resp.status_code == 200
+        msg = adapter.sent[0]
+        assert msg.thread_id == "T456"
+        assert msg.conversation_id == "C789"
