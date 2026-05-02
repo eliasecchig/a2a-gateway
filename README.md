@@ -11,8 +11,8 @@ A gateway that connects any [A2A protocol](https://google.github.io/A2A/) agent 
  WhatsApp ──┤                        │   Your A2A Agent    │
    G Chat ──┤                        │   (ADK, LangGraph,  │
     Email ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
- Telegram ──┤                        └─────────────────────┘
-  Discord ──┤
+ Telegram ──┤  ◀───── /push ─────────┤                     │
+  Discord ──┤                        └─────────────────────┘
    Custom ──┘
 ```
 
