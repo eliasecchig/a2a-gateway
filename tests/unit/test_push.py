@@ -44,3 +44,28 @@ class TestPushEdgeCases:
             )
         assert resp.status_code == 422
         assert "invalid JSON" in resp.json()["error"]
+
+    async def test_push_non_dict_body_returns_422(self):
+        app = create_app(GatewayConfig())
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post("/push", json="hello")
+        assert resp.status_code == 422
+        assert "JSON object" in resp.json()["error"]
+
+    async def test_push_non_string_fields_returns_422(self):
+        app = create_app(GatewayConfig())
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/push",
+                json={
+                    "channel": "test",
+                    "recipient_id": 123,
+                    "text": "hi",
+                },
+            )
+        assert resp.status_code == 422
+        assert "non-empty strings" in resp.json()["error"]

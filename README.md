@@ -13,7 +13,7 @@ A gateway that connects any [A2A protocol](https://google.github.io/A2A/) agent 
     Email ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
  Telegram ──┤                        └─────────────────────┘
   Discord ──┤
-  Custom ──┘
+   Custom ──┘
 ```
 
 Adding a built-in channel is mostly just setting env vars. Need a platform we don't support? Subclass `SimpleChannel`, implement one method, and you're in. The gateway takes care of message chunking, rate limiting, retries, debouncing, typing indicators, streaming responses, and per-channel markdown formatting. Everything is opt-in: if you don't configure a feature, it doesn't run.
@@ -70,14 +70,21 @@ All channels use official APIs.
 Need a platform we don't cover? Subclass `SimpleChannel`, implement `send()`, and feed inbound messages to `dispatch()`. Your channel gets the full pipeline — rate limiting, chunking, debounce, streaming, typing indicators — for free.
 
 ```python
+import httpx
 from gateway.ext import SimpleChannel, InboundMessage, OutboundMessage
 
 class RocketChatChannel(SimpleChannel):
     channel_type = "rocketchat"
 
+    def __init__(self, base_url: str, token: str, **kwargs):
+        super().__init__(**kwargs)
+        self._http = httpx.AsyncClient(
+            base_url=base_url,
+            headers={"X-Auth-Token": token},
+        )
+
     async def send(self, message: OutboundMessage) -> str | None:
-        # Send the response to your platform
-        resp = await self.http.post(f"{self.base_url}/api/v1/chat.sendMessage", json={
+        resp = await self._http.post("/api/v1/chat.sendMessage", json={
             "channel": message.conversation_id,
             "text": message.text,
         })
@@ -94,7 +101,11 @@ from gateway.server import create_app
 
 config = load_config()
 app = create_app(config, custom_channels=[
-    RocketChatChannel(account_id="prod"),
+    RocketChatChannel(
+        base_url="https://chat.example.com",
+        token="my-token",
+        account_id="prod",
+    ),
 ])
 ```
 
@@ -106,11 +117,12 @@ custom_channels:
     account_id: "prod"
     kwargs:
       base_url: "https://chat.example.com"
+      token: "my-token"
     features:
       typing: true
 ```
 
-Kwargs are forwarded to `__init__`. Per-channel features can be toggled individually.
+`kwargs` are forwarded to `__init__`. Per-channel `features` toggle pipeline behavior individually.
 
 ### Inbound messages
 
@@ -293,6 +305,7 @@ These features run out of the box with sensible defaults. No config needed, but 
 | **Rate limiting** | 60 req/min (A2A), 30 req/min (channel) | Protects both sides with exponential backoff retries |
 | **Streaming** | enabled, 500ms update interval | Edits messages in-place as tokens arrive (if agent supports it) |
 | **Health endpoints** | 5 min stale timeout | `/live`, `/ready`, `/health` for k8s probes |
+| **Outbound push** | always on | `POST /push` sends messages through any channel without an inbound trigger |
 | **Session management** | 30 min idle timeout | Tracks conversation context, cleans up idle sessions |
 | **Concurrency limits** | 5 per conversation | Prevents a single conversation from overloading the agent |
 | **Capability discovery** | always on | Fetches `/.well-known/agent.json` on startup, adapts automatically |
@@ -439,6 +452,32 @@ channels:
 ```
 </details>
 
+## Outbound push
+
+`POST /push` sends a message through any registered channel without an inbound trigger — useful for scheduled nudges, alerts, or agent-initiated outreach.
+
+```bash
+curl -X POST https://your-gateway/push \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "channel": "slack",
+    "recipient_id": "U12345ABC",
+    "text": "Weekly reminder: review your open PRs!",
+    "thread_id": "1234567890.123456",
+    "conversation_id": "C12345ABC"
+  }'
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `channel` | yes | Adapter name (e.g. `slack`, `whatsapp`, `telegram:prod`) |
+| `recipient_id` | yes | Platform-specific user/chat ID |
+| `text` | yes | Message body |
+| `thread_id` | no | Reply in a specific thread |
+| `conversation_id` | no | Channel/space/chat context |
+
+Returns `{"status": "sent", "message_id": "..."}` on success. The message bypasses the A2A agent and goes directly to the channel adapter.
+
 ## Docker
 
 A prebuilt image is published to GitHub Container Registry on every push to `main`:
@@ -467,7 +506,7 @@ Mount a config file: `-v $(pwd)/config.yaml:/app/config.yaml`.
 ## Testing
 
 ```bash
-uv run pytest tests/ -v                  # 282 tests, all offline
+uv run pytest tests/ -v                  # 354 tests, all offline
 uv run pytest -m live tests/live/ -v     # live integration tests
 ```
 

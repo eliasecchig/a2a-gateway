@@ -259,15 +259,30 @@ def create_app(
                 content={"error": "invalid JSON body"},
             )
 
+        if not isinstance(body, dict):
+            return JSONResponse(
+                status_code=422,
+                content={"error": "request body must be a JSON object"},
+            )
+
         channel = body.get("channel")
         recipient_id = body.get("recipient_id")
         text = body.get("text")
 
-        if not channel or not recipient_id or not text:
+        if (
+            not isinstance(channel, str)
+            or not isinstance(recipient_id, str)
+            or not isinstance(text, str)
+            or not channel
+            or not recipient_id
+            or not text
+        ):
             return JSONResponse(
                 status_code=422,
                 content={
-                    "error": "channel, recipient_id, and text are required"
+                    "error": (
+                        "channel, recipient_id, and text are required non-empty strings"
+                    )
                 },
             )
 
