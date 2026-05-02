@@ -476,7 +476,35 @@ curl -X POST https://your-gateway/push \
 | `thread_id` | no | Reply in a specific thread |
 | `conversation_id` | no | Channel/space/chat context |
 
-Returns `{"status": "sent", "message_id": "..."}` on success. The message bypasses the A2A agent and goes directly to the channel adapter.
+**Responses:**
+
+| Status | Meaning |
+|--------|---------|
+| `200` | `{"status": "sent", "message_id": "..."}` — delivered to the channel adapter |
+| `404` | Channel not found (response includes `available` channels list) |
+| `422` | Missing or invalid fields |
+| `502` | Adapter failed to send |
+
+The message bypasses the A2A agent and goes directly to the channel adapter. To discover available channel names, check `GET /health` → `channels`.
+
+**Python example:**
+
+```python
+import httpx
+
+async def send_nudge():
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://your-gateway/push",
+            json={
+                "channel": "slack",
+                "recipient_id": "U12345ABC",
+                "text": "Weekly reminder: review your open PRs!",
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
+```
 
 ## Docker
 
