@@ -90,3 +90,64 @@ class TestRetryWithBackoff:
         retry = RetryWithBackoff(config, retryable=(RuntimeError,))
         result = await retry.execute(fn)
         assert result == "done"
+
+
+@pytest.mark.asyncio
+class TestRetryWithBackoffStream:
+    async def test_stream_succeeds_first_try(self):
+        async def gen():
+            yield 1
+            yield 2
+
+        retry = RetryWithBackoff(BackoffConfig(max_retries=3, initial=0.01))
+        items = [x async for x in retry.execute_stream(gen)]
+        assert items == [1, 2]
+
+    async def test_stream_retries_on_failure(self):
+        attempt = 0
+
+        async def gen():
+            nonlocal attempt
+            attempt += 1
+            if attempt < 3:
+                raise ConnectionError("refused")
+            yield "ok"
+
+        retry = RetryWithBackoff(
+            BackoffConfig(max_retries=5, initial=0.01, factor=1.0),
+            retryable=(ConnectionError,),
+        )
+        items = [x async for x in retry.execute_stream(gen)]
+        assert items == ["ok"]
+        assert attempt == 3
+
+    async def test_stream_exceeds_max_retries(self):
+        async def gen():
+            raise ConnectionError("down")
+            yield
+
+        retry = RetryWithBackoff(
+            BackoffConfig(max_retries=2, initial=0.01),
+            retryable=(ConnectionError,),
+        )
+        with pytest.raises(ConnectionError, match="down"):
+            async for _ in retry.execute_stream(gen):
+                pass
+
+    async def test_stream_no_retry_on_non_retryable(self):
+        attempt = 0
+
+        async def gen():
+            nonlocal attempt
+            attempt += 1
+            raise ValueError("bad")
+            yield
+
+        retry = RetryWithBackoff(
+            BackoffConfig(max_retries=3, initial=0.01),
+            retryable=(ConnectionError,),
+        )
+        with pytest.raises(ValueError, match="bad"):
+            async for _ in retry.execute_stream(gen):
+                pass
+        assert attempt == 1

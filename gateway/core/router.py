@@ -290,8 +290,10 @@ class Router:
         accumulated_text = ""
         final_event: A2AStreamEvent | None = None
 
+        retry = self._get_retry(msg.channel)
         try:
-            async for event in self.a2a.send_message_stream(
+            async for event in retry.execute_stream(
+                self.a2a.send_message_stream,
                 text=text,
                 context_id=session.context_id,
                 task_id=session.task_id,

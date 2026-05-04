@@ -18,7 +18,7 @@ import asyncio
 import logging
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -132,3 +132,35 @@ class RetryWithBackoff:
         if last_exc is not None:
             raise last_exc
         raise RuntimeError("unreachable")
+
+    async def execute_stream(
+        self,
+        stream_factory: Callable[..., AsyncIterator[T]],
+        *args: object,
+        **kwargs: object,
+    ) -> AsyncIterator[T]:
+        delay = self._cfg.initial
+        last_exc: BaseException | None = None
+        for attempt in range(self._cfg.max_retries + 1):
+            try:
+                async for item in stream_factory(*args, **kwargs):
+                    yield item
+                return
+            except self._retryable as e:
+                last_exc = e
+                if attempt == self._cfg.max_retries:
+                    raise
+                jitter = (
+                    delay * self._cfg.jitter_pct * (2 * random.random() - 1)
+                )
+                sleep = min(delay + jitter, self._cfg.max_delay)
+                logger.warning(
+                    "stream attempt %d failed (%s), retrying in %.1fs",
+                    attempt + 1,
+                    e,
+                    sleep,
+                )
+                await asyncio.sleep(sleep)
+                delay = min(delay * self._cfg.factor, self._cfg.max_delay)
+        if last_exc is not None:
+            raise last_exc

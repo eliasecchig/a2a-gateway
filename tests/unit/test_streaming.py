@@ -19,6 +19,7 @@ from unittest.mock import AsyncMock, patch
 from gateway.config import StreamingConfig, load_config
 from gateway.core.a2a_client import A2AClient, A2AStreamEvent
 from gateway.core.capabilities import AgentCapabilities
+from gateway.core.rate_limit import BackoffConfig
 from gateway.core.router import Router
 from gateway.core.types import InboundMessage, OutboundMessage
 from tests.helpers.mock_adapter import MockAdapter
@@ -181,6 +182,65 @@ class TestStreamingRouter:
             await router._handle_inner(_make_msg())
 
         assert len(adapter.sent) >= 1
+
+    async def test_streaming_retries_on_connection_error(self):
+        router = Router(
+            A2AClient("http://localhost:9999"),
+            streaming_update_interval_ms=100,
+            backoff_config=BackoffConfig(
+                max_retries=3, initial=0.01, factor=1.0
+            ),
+        )
+        router._agent_capabilities = AgentCapabilities(streaming=True)
+
+        adapter = EditableAdapter("slack")
+        router.register(adapter)
+
+        attempt = 0
+
+        async def flaky_stream(*args, **kwargs):
+            nonlocal attempt
+            attempt += 1
+            if attempt < 3:
+                raise ConnectionError("refused")
+            yield A2AStreamEvent(
+                text="recovered",
+                is_final=True,
+                context_id="ctx1",
+                task_id="t1",
+            )
+
+        router.a2a.send_message_stream = flaky_stream
+
+        await router._handle_inner(_make_msg())
+
+        assert attempt == 3
+        assert len(adapter.sent) >= 1
+        assert adapter.sent[-1].text == "recovered"
+
+    async def test_streaming_gives_up_after_max_retries(self):
+        router = Router(
+            A2AClient("http://localhost:9999"),
+            streaming_update_interval_ms=100,
+            backoff_config=BackoffConfig(
+                max_retries=2, initial=0.01, factor=1.0
+            ),
+        )
+        router._agent_capabilities = AgentCapabilities(streaming=True)
+
+        adapter = EditableAdapter("slack")
+        router.register(adapter)
+
+        async def always_fail(*args, **kwargs):
+            raise ConnectionError("down")
+            yield
+
+        router.a2a.send_message_stream = always_fail
+
+        await router._handle_inner(_make_msg())
+
+        assert len(adapter.sent) == 1
+        assert "Sorry" in adapter.sent[0].text
 
     async def test_falls_back_when_streaming_not_configured(self):
         router = Router(A2AClient("http://localhost:9999"))
