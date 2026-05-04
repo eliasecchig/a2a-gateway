@@ -188,6 +188,7 @@ class Router:
             msg.text[:80],
             extra=log_extra,
         )
+        logger.debug("[%s] user: %s", msg.channel, msg.text)
 
         if self._a2a_limiter:
             await self._a2a_limiter.acquire()
@@ -254,6 +255,7 @@ class Router:
                 "chunks_sent": len(chunks),
             },
         )
+        logger.debug("[%s] agent: %s", msg.channel, resp.text)
 
         if not adapter:
             return
@@ -385,6 +387,7 @@ class Router:
                 "streaming": True,
             },
         )
+        logger.debug("[%s] agent: %s", msg.channel, accumulated_text)
 
     def _get_retry(self, channel: str) -> RetryWithBackoff:
         base_ch = self._base_channel(channel)

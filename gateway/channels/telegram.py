@@ -154,6 +154,7 @@ class TelegramAdapter(ChannelAdapter):
             sent = await self._bot.send_message(
                 chat_id=chat_id,
                 text=message.text,
+                parse_mode="HTML",
                 reply_to_message_id=(
                     int(message.thread_id) if message.thread_id else None
                 ),
@@ -186,6 +187,7 @@ class TelegramAdapter(ChannelAdapter):
                 chat_id=conversation_id,
                 message_id=int(message_id),
                 text=text,
+                parse_mode="HTML",
             )
         except Exception:
             logger.warning("telegram message edit failed for msg_id=%s", message_id)

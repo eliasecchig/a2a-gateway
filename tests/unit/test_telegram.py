@@ -56,7 +56,10 @@ class TestTelegramAdapter:
         result = await adapter.send(msg)
 
         mock_bot.send_message.assert_called_once_with(
-            chat_id="456", text="hello", reply_to_message_id=None
+            chat_id="456",
+            text="hello",
+            parse_mode="HTML",
+            reply_to_message_id=None,
         )
         assert result == "42"
 
@@ -78,7 +81,10 @@ class TestTelegramAdapter:
         await adapter.send(msg)
 
         mock_bot.send_message.assert_called_once_with(
-            chat_id="456", text="reply", reply_to_message_id=99
+            chat_id="456",
+            text="reply",
+            parse_mode="HTML",
+            reply_to_message_id=99,
         )
 
     async def test_edit_message(self):
@@ -89,7 +95,10 @@ class TestTelegramAdapter:
         await adapter.edit_message("42", "456", "updated text")
 
         mock_bot.edit_message_text.assert_called_once_with(
-            chat_id="456", message_id=42, text="updated text"
+            chat_id="456",
+            message_id=42,
+            text="updated text",
+            parse_mode="HTML",
         )
 
     async def test_send_typing(self):
