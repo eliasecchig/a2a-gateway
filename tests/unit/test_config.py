@@ -204,7 +204,7 @@ class TestEnvOverrides:
 
     def test_host_and_port_from_env(self, tmp_path: Path, monkeypatch):
         monkeypatch.setenv("GATEWAY_HOST", "127.0.0.1")
-        monkeypatch.setenv("GATEWAY_PORT", "9000")
+        monkeypatch.setenv("PORT", "9000")
         cfg = load_config(tmp_path / "nope.yaml")
         assert cfg.host == "127.0.0.1"
         assert cfg.port == 9000

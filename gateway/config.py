@@ -317,11 +317,11 @@ def _apply_env_overrides(cfg: GatewayConfig) -> None:
             cfg.a2a_auth.token = token
     if val := env("GATEWAY_HOST"):
         cfg.host = val
-    if val := env("GATEWAY_PORT"):
+    if val := env("PORT"):
         try:
             cfg.port = int(val)
         except ValueError:
-            raise ValueError(f"GATEWAY_PORT must be an integer, got: {val!r}") from None
+            raise ValueError(f"PORT must be an integer, got: {val!r}") from None
 
     if (token := env("SLACK_BOT_TOKEN")) and not cfg.slack_accounts:
         cfg.slack_accounts = [
