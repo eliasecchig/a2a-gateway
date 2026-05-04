@@ -131,7 +131,7 @@ class EmailAdapter(ChannelAdapter):
     async def send(self, message: OutboundMessage) -> str | None:
         if message.attachments:
             msg = MIMEMultipart()
-            msg.attach(MIMEText(message.text, "plain", "utf-8"))
+            msg.attach(MIMEText(message.text, "html", "utf-8"))
             for att in message.attachments:
                 part = MIMEBase(*att.mime_type.split("/", 1))
                 if att.data:
@@ -144,7 +144,7 @@ class EmailAdapter(ChannelAdapter):
                 )
                 msg.attach(part)
         else:
-            msg = MIMEText(message.text, "plain", "utf-8")
+            msg = MIMEText(message.text, "html", "utf-8")
 
         msg["From"] = self._from_address
         msg["To"] = message.recipient_id

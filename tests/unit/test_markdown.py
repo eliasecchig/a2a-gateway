@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from gateway.core.markdown import (
+    EmailMarkdownAdapter,
     PassthroughMarkdown,
     SlackMarkdownAdapter,
     WhatsAppMarkdownAdapter,
@@ -80,8 +81,8 @@ class TestGetMarkdownAdapter:
     def test_google_chat_passthrough(self):
         assert isinstance(get_markdown_adapter("google_chat"), PassthroughMarkdown)
 
-    def test_email_passthrough(self):
-        assert isinstance(get_markdown_adapter("email"), PassthroughMarkdown)
+    def test_email_adapter(self):
+        assert isinstance(get_markdown_adapter("email"), EmailMarkdownAdapter)
 
     def test_unknown_channel_passthrough(self):
         assert isinstance(get_markdown_adapter("unknown"), PassthroughMarkdown)
