@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class SessionState:
     context_id: str | None = None
-    task_id: str | None = None
     last_activity: float = field(default_factory=time.monotonic)
 
 
@@ -47,11 +46,9 @@ class SessionStore:
         self,
         key: str,
         context_id: str | None,
-        task_id: str | None,
     ) -> None:
         session = self.get(key)
         session.context_id = context_id
-        session.task_id = task_id
         session.last_activity = time.monotonic()
 
     def touch(self, key: str) -> None:

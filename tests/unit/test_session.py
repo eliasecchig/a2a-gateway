@@ -24,7 +24,6 @@ class TestSessionStore:
         store = SessionStore()
         session = store.get("key1")
         assert session.context_id is None
-        assert session.task_id is None
         assert store.active_count == 1
 
     def test_get_returns_existing_session(self):
@@ -38,10 +37,9 @@ class TestSessionStore:
     def test_update_sets_fields(self):
         store = SessionStore()
         store.get("key1")
-        store.update("key1", "ctx-1", "task-1")
+        store.update("key1", "ctx-1")
         session = store.get("key1")
         assert session.context_id == "ctx-1"
-        assert session.task_id == "task-1"
 
     def test_update_refreshes_timestamp(self):
         store = SessionStore()
@@ -51,7 +49,7 @@ class TestSessionStore:
             "gateway.core.session.time.monotonic",
             return_value=old_activity + 100,
         ):
-            store.update("key1", "ctx-1", "task-1")
+            store.update("key1", "ctx-1")
         assert store.get("key1").last_activity == old_activity + 100
 
     def test_touch_refreshes_timestamp(self):

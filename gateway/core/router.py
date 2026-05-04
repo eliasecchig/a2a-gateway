@@ -232,7 +232,7 @@ class Router:
             return
         resp, a2a_ms = result
 
-        self._session_store.update(session_key, resp.context_id, resp.task_id)
+        self._session_store.update(session_key, resp.context_id)
 
         formatted_text = get_markdown_adapter(base_ch).format_text(resp.text)
 
@@ -297,7 +297,6 @@ class Router:
                 self.a2a.send_message_stream,
                 text=text,
                 context_id=session.context_id,
-                task_id=session.task_id,
             ):
                 if event.text:
                     accumulated_text = event.text
@@ -352,9 +351,7 @@ class Router:
             accumulated_text = final_event.text
 
         if final_event:
-            self._session_store.update(
-                session_key, final_event.context_id, final_event.task_id
-            )
+            self._session_store.update(session_key, final_event.context_id)
 
         formatted = get_markdown_adapter(base_ch).format_text(accumulated_text)
 
@@ -410,7 +407,6 @@ class Router:
                 self.a2a.send_message,
                 text=text,
                 context_id=session.context_id,
-                task_id=session.task_id,
             )
             return resp, (time.monotonic() - t0) * 1000
 

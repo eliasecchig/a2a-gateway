@@ -176,7 +176,7 @@ class TestRouterPipeline:
 
         second_req = json.loads(route.calls[1].request.content)
         assert second_req["params"]["message"]["contextId"] == "c1"
-        assert second_req["params"]["message"]["taskId"] == "t1"
+        assert "taskId" not in second_req["params"]["message"]
         await client.close()
 
     @respx.mock
