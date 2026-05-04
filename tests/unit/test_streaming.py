@@ -92,7 +92,7 @@ class TestA2AStreamEvent:
         event = A2AStreamEvent.from_result(result)
         assert event.is_final is True
 
-    def test_from_result_text_from_status_message(self):
+    def test_non_final_ignores_status_message_text(self):
         result = {
             "status": {
                 "state": "working",
@@ -100,7 +100,17 @@ class TestA2AStreamEvent:
             },
         }
         event = A2AStreamEvent.from_result(result)
-        assert event.text == "thinking"
+        assert event.text == ""
+
+    def test_final_uses_status_message_fallback(self):
+        result = {
+            "status": {
+                "state": "completed",
+                "message": {"parts": [{"kind": "text", "text": "done"}]},
+            },
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.text == "done"
 
 
 class TestStreamingRouter:
