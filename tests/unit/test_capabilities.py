@@ -43,7 +43,7 @@ class TestCapabilityDiscovery:
                 }
             ],
         }
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(200, json=card)
         )
 
@@ -60,7 +60,7 @@ class TestCapabilityDiscovery:
     @respx.mock
     async def test_discover_no_streaming(self):
         card = {"name": "test-agent", "capabilities": {}, "skills": []}
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(200, json=card)
         )
 
@@ -78,7 +78,7 @@ class TestCapabilityDiscovery:
             "maxMessageLength": 8192,
             "skills": [],
         }
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(200, json=card)
         )
 
@@ -89,7 +89,7 @@ class TestCapabilityDiscovery:
 
     @respx.mock
     async def test_discover_failure_returns_defaults(self):
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(404)
         )
 
@@ -102,7 +102,7 @@ class TestCapabilityDiscovery:
     @respx.mock
     async def test_discover_caches_result(self):
         card = {"name": "test-agent", "capabilities": {}, "skills": []}
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(200, json=card)
         )
 
@@ -116,7 +116,7 @@ class TestCapabilityDiscovery:
 
     @respx.mock
     async def test_discover_caches_on_failure(self):
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(500)
         )
 
@@ -128,7 +128,7 @@ class TestCapabilityDiscovery:
     @respx.mock
     async def test_discover_strips_trailing_slash(self):
         card = {"name": "test-agent", "capabilities": {}, "skills": []}
-        respx.get("http://localhost:8001/.well-known/agent.json").mock(
+        respx.get("http://localhost:8001/.well-known/agent-card.json").mock(
             return_value=httpx.Response(200, json=card)
         )
 

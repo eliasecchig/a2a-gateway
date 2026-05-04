@@ -178,8 +178,9 @@ Set a channel's token and the gateway enables it. This is the recommended approa
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `A2A_SERVER_URL` | `http://localhost:8001` | Your A2A agent URL |
+| `A2A_AGENT_CARD_PATH` | `/.well-known/agent-card.json` | Path to the agent card endpoint (A2A spec 1.0 default) |
 | `GATEWAY_HOST` | `0.0.0.0` | Bind address |
-| `GATEWAY_PORT` | `8000` | Listen port |
+| `PORT` | `8000` | Listen port (matches Cloud Run convention) |
 | `A2A_AUTH` | - | Auth mode: `google_id_token`, `google_access_token`, or `token` |
 | `A2A_AUTH_TOKEN` | - | Static bearer token (when `A2A_AUTH=token`) |
 
@@ -232,6 +233,7 @@ For multi-account setups or fine-grained feature control, use `config.yaml`:
 ```yaml
 a2a:
   server_url: "http://localhost:8001"
+  # agent_card_path: "/.well-known/agent-card.json"  # default (A2A spec 1.0)
 
 channels:
   slack:

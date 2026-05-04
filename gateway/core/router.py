@@ -58,6 +58,7 @@ class Router:
         typing_indicator: TypingIndicator | None = None,
         ack_config: dict[str, dict] | None = None,
         streaming_update_interval_ms: int | None = None,
+        agent_card_path: str = "/.well-known/agent-card.json",
     ) -> None:
         self.a2a = a2a_client
         self.channels: dict[str, ChannelAdapter] = {}
@@ -67,7 +68,7 @@ class Router:
         self._concurrency = concurrency_limiter
         self._typing = typing_indicator
         self._ack_config = ack_config
-        self._capability_discovery = CapabilityDiscovery()
+        self._capability_discovery = CapabilityDiscovery(agent_card_path)
         self._agent_capabilities: AgentCapabilities | None = None
         self._streaming_update_interval_ms = streaming_update_interval_ms
 

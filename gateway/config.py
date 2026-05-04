@@ -226,6 +226,7 @@ class A2AAuthConfig:
 @dataclass
 class GatewayConfig:
     a2a_server_url: str = "http://localhost:8001"
+    a2a_agent_card_path: str = "/.well-known/agent-card.json"
     a2a_auth: A2AAuthConfig | None = None
     host: str = "0.0.0.0"
     port: int = 8000
@@ -265,6 +266,9 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
 
     cfg = GatewayConfig(
         a2a_server_url=a2a.get("server_url", "http://localhost:8001"),
+        a2a_agent_card_path=a2a.get(
+            "agent_card_path", "/.well-known/agent-card.json"
+        ),
         a2a_auth=_build_optional(A2AAuthConfig, a2a.get("auth")),
         host=raw.get("host", "0.0.0.0"),
         port=raw.get("port", 8000),
@@ -309,6 +313,8 @@ def _apply_env_overrides(cfg: GatewayConfig) -> None:
 
     if val := env("A2A_SERVER_URL"):
         cfg.a2a_server_url = val
+    if val := env("A2A_AGENT_CARD_PATH"):
+        cfg.a2a_agent_card_path = val
     if auth_type := env("A2A_AUTH"):
         if cfg.a2a_auth is None:
             cfg.a2a_auth = A2AAuthConfig()

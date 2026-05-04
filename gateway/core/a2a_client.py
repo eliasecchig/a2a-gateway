@@ -31,20 +31,26 @@ logger = logging.getLogger(__name__)
 _STREAM_READ_TIMEOUT = 300.0
 
 
-def _extract_text_from_result(result: dict[str, Any]) -> str:
+def _extract_artifact_text(result: dict[str, Any]) -> str:
     parts_text: list[str] = []
     for artifact in result.get("artifacts") or []:
         for part in artifact.get("parts", []):
             if part.get("kind") == "text":
                 parts_text.append(part.get("text", ""))
+    return "".join(parts_text)
 
-    if not parts_text:
-        status = result.get("status", {})
-        msg = status.get("message") or {}
-        for part in msg.get("parts", []):
-            if part.get("kind") == "text":
-                parts_text.append(part.get("text", ""))
 
+def _extract_text_from_result(result: dict[str, Any]) -> str:
+    text = _extract_artifact_text(result)
+    if text:
+        return text
+
+    status = result.get("status", {})
+    msg = status.get("message") or {}
+    parts_text: list[str] = []
+    for part in msg.get("parts", []):
+        if part.get("kind") == "text":
+            parts_text.append(part.get("text", ""))
     return "".join(parts_text)
 
 
@@ -74,8 +80,10 @@ class A2AClient:
         self,
         server_url: str,
         auth: AuthProvider | None = None,
+        agent_card_path: str = "/.well-known/agent-card.json",
     ) -> None:
         self.server_url = server_url.rstrip("/")
+        self._agent_card_path = agent_card_path
         self._http = httpx.AsyncClient(
             timeout=60.0,
             limits=httpx.Limits(
@@ -95,7 +103,7 @@ class A2AClient:
         await self._http.aclose()
 
     async def get_agent_card(self) -> dict[str, Any]:
-        url = self.server_url.rstrip("/") + "/.well-known/agent.json"
+        url = self.server_url.rstrip("/") + self._agent_card_path
         headers = await self._auth_headers()
         resp = await self._http.get(url, headers=headers)
         resp.raise_for_status()
@@ -183,8 +191,14 @@ class A2AStreamEvent:
         status = result.get("status", {})
         is_final = status.get("state") in ("completed", "failed", "canceled")
 
+        text = (
+            _extract_text_from_result(result)
+            if is_final
+            else _extract_artifact_text(result)
+        )
+
         return cls(
-            text=_extract_text_from_result(result),
+            text=text,
             is_final=is_final,
             context_id=result.get("contextId"),
             task_id=result.get("id"),

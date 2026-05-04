@@ -32,11 +32,14 @@ class AgentCapabilities:
 
 
 class CapabilityDiscovery:
-    def __init__(self) -> None:
+    def __init__(
+        self, agent_card_path: str = "/.well-known/agent-card.json"
+    ) -> None:
+        self._agent_card_path = agent_card_path
         self._cached: AgentCapabilities | None = None
 
     async def discover(self, server_url: str) -> AgentCapabilities:
-        url = server_url.rstrip("/") + "/.well-known/agent.json"
+        url = server_url.rstrip("/") + self._agent_card_path
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url)

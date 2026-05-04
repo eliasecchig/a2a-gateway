@@ -61,7 +61,11 @@ def create_app(
     a2a_auth = _build_a2a_auth(config)
 
     router = Router(
-        A2AClient(config.a2a_server_url, auth=a2a_auth),
+        A2AClient(
+            config.a2a_server_url,
+            auth=a2a_auth,
+            agent_card_path=config.a2a_agent_card_path,
+        ),
         policy_checker=policy_checker,
         debounce_config=debounce_cfg,
         chunk_config=chunk_cfg,
@@ -79,6 +83,7 @@ def create_app(
         streaming_update_interval_ms=(
             config.streaming.update_interval_ms if config.streaming.enabled else None
         ),
+        agent_card_path=config.a2a_agent_card_path,
     )
 
     webhook_adapters = []
