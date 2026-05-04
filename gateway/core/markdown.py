@@ -93,7 +93,7 @@ class TelegramMarkdownAdapter(MarkdownAdapter):
                 if first_nl != -1:
                     hint = inner[:first_nl].strip()
                     if hint and " " not in hint:
-                        inner = inner[first_nl + 1:]
+                        inner = inner[first_nl + 1 :]
                 result.append(f"<pre>{html.escape(inner)}</pre>")
             else:
                 result.append(self._convert_inline(part))
@@ -133,7 +133,7 @@ class EmailMarkdownAdapter(MarkdownAdapter):
                 if first_nl != -1:
                     hint = inner[:first_nl].strip()
                     if hint and " " not in hint:
-                        inner = inner[first_nl + 1:]
+                        inner = inner[first_nl + 1 :]
                 result.append(f"<pre>{html.escape(inner)}</pre>")
             else:
                 result.append(self._convert_inline(part))

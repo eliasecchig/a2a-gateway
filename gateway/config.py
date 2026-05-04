@@ -266,9 +266,7 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
 
     cfg = GatewayConfig(
         a2a_server_url=a2a.get("server_url", "http://localhost:8001"),
-        a2a_agent_card_path=a2a.get(
-            "agent_card_path", "/.well-known/agent-card.json"
-        ),
+        a2a_agent_card_path=a2a.get("agent_card_path", "/.well-known/agent-card.json"),
         a2a_auth=_build_optional(A2AAuthConfig, a2a.get("auth")),
         host=raw.get("host", "0.0.0.0"),
         port=raw.get("port", 8000),

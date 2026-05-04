@@ -197,9 +197,7 @@ class TestStreamingRouter:
         router = Router(
             A2AClient("http://localhost:9999"),
             streaming_update_interval_ms=100,
-            backoff_config=BackoffConfig(
-                max_retries=3, initial=0.01, factor=1.0
-            ),
+            backoff_config=BackoffConfig(max_retries=3, initial=0.01, factor=1.0),
         )
         router._agent_capabilities = AgentCapabilities(streaming=True)
 
@@ -232,9 +230,7 @@ class TestStreamingRouter:
         router = Router(
             A2AClient("http://localhost:9999"),
             streaming_update_interval_ms=100,
-            backoff_config=BackoffConfig(
-                max_retries=2, initial=0.01, factor=1.0
-            ),
+            backoff_config=BackoffConfig(max_retries=2, initial=0.01, factor=1.0),
         )
         router._agent_capabilities = AgentCapabilities(streaming=True)
 

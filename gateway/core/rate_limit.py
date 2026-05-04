@@ -150,9 +150,7 @@ class RetryWithBackoff:
                 last_exc = e
                 if attempt == self._cfg.max_retries:
                     raise
-                jitter = (
-                    delay * self._cfg.jitter_pct * (2 * random.random() - 1)
-                )
+                jitter = delay * self._cfg.jitter_pct * (2 * random.random() - 1)
                 sleep = min(delay + jitter, self._cfg.max_delay)
                 logger.warning(
                     "stream attempt %d failed (%s), retrying in %.1fs",

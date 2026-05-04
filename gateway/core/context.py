@@ -112,8 +112,6 @@ class ChannelContextInjector:
                 }
             )
         except KeyError:
-            logger.warning(
-                "bad context_template for %s, skipping", channel
-            )
+            logger.warning("bad context_template for %s, skipping", channel)
             return text
         return f"{rendered}\n\n{text}"

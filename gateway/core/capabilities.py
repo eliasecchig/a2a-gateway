@@ -32,9 +32,7 @@ class AgentCapabilities:
 
 
 class CapabilityDiscovery:
-    def __init__(
-        self, agent_card_path: str = "/.well-known/agent-card.json"
-    ) -> None:
+    def __init__(self, agent_card_path: str = "/.well-known/agent-card.json") -> None:
         self._agent_card_path = agent_card_path
         self._cached: AgentCapabilities | None = None
 
