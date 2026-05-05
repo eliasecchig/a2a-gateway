@@ -4,14 +4,14 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
-A gateway that connects any [A2A (Agent-to-Agent)](https://google.github.io/A2A/) protocol agent to Slack, WhatsApp, Google Chat, Email, Telegram, Discord, and your own custom channels. You build the agent, the gateway handles the channels.
+A gateway that connects any [A2A (Agent-to-Agent)](https://google.github.io/A2A/) protocol agent to Telegram, Slack, WhatsApp, Google Chat, Email, Discord, and your own custom channels. You build the agent, the gateway handles the channels.
 
 ```
-    Slack ──┐                        ┌─────────────────────┐
- WhatsApp ──┤                        │   Your A2A Agent    │
-   G Chat ──┤                        │   (ADK, LangGraph,  │
-    Email ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
- Telegram ──┤  ◀───── /push ─────────┤                     │
+ Telegram ──┐                        ┌─────────────────────┐
+    Slack ──┤                        │   Your A2A Agent    │
+ WhatsApp ──┤                        │   (ADK, LangGraph,  │
+   G Chat ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
+    Email ──┤  ◀───── /push ─────────┤                     │
   Discord ──┤                        └─────────────────────┘
    Custom ──┘
 ```
@@ -25,10 +25,11 @@ Adding a built-in channel is mostly just setting env vars. Need a platform we do
 ```bash
 docker run -p 8000:8000 \
   -e A2A_SERVER_URL=http://host.docker.internal:8001 \
-  -e SLACK_BOT_TOKEN=xoxb-your-token \
-  -e SLACK_APP_TOKEN=xapp-your-token \
+  -e TELEGRAM_BOT_TOKEN=your-bot-token \
   ghcr.io/eliasecchig/a2a-gateway:main
 ```
+
+Get a bot token from [@BotFather](https://t.me/BotFather) in under a minute.
 
 ### From source
 
@@ -44,8 +45,7 @@ Run with env vars (no config file needed):
 
 ```bash
 export A2A_SERVER_URL=http://localhost:8001
-export SLACK_BOT_TOKEN=xoxb-your-token
-export SLACK_APP_TOKEN=xapp-your-token
+export TELEGRAM_BOT_TOKEN=your-bot-token
 uv run a2a-gateway
 ```
 
@@ -69,12 +69,12 @@ The gateway starts on `http://localhost:8000`.
 
 | Channel | Transport | Public URL needed? | Editing | Typing |
 |---------|-----------|-------------------|---------|--------|
+| Telegram | Bot API (polling) | No | Yes | Native |
 | Slack | Socket Mode | No | Yes | Opt-in |
+| Discord | Gateway (websocket) | No | Yes | Native |
 | WhatsApp | Meta Cloud API webhook | Yes | No | Opt-in |
 | Google Chat | Webhook + REST API | Yes | Yes | Opt-in |
 | Email | SMTP (aiosmtpd) | No | No | - |
-| Telegram | Bot API (polling) | No | Yes | Native |
-| Discord | Gateway (websocket) | No | Yes | Native |
 
 All channels use official APIs.
 
@@ -117,8 +117,7 @@ A prebuilt image is published to GHCR on every push to `main` (see [Quick start]
 docker build -t a2a-gateway .
 docker run -p 8000:8000 \
   -e A2A_SERVER_URL=http://your-agent:8001 \
-  -e SLACK_BOT_TOKEN=xoxb-your-token \
-  -e SLACK_APP_TOKEN=xapp-your-token \
+  -e TELEGRAM_BOT_TOKEN=your-bot-token \
   a2a-gateway
 ```
 
