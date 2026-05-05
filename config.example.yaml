@@ -103,7 +103,7 @@ channels:
 
 # --- Custom channels ---
 # Bring your own channel by subclassing SimpleChannel.
-# See README for a full example.
+# See docs/custom-channels.md for a full example.
 
 # custom_channels:
 #   - class_path: "my_package.MyChannel"
