@@ -25,7 +25,7 @@ dependencies = [
     "google-api-python-client>=2.160",
     "aiosmtpd>=1.4",
     "pyyaml>=6.0",
-    "google-adk[a2a]>=1.0",
+    "google-adk[a2a]>=1.28.1",
     "a2a-sdk[http-server]==0.3.26",
     "python-telegram-bot>=21",
     "discord.py>=2.4",
