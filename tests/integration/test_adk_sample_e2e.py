@@ -1,12 +1,9 @@
-"""Live e2e: gateway A2AClient (v1.0 wire) <-> samples/adk/ (a2a-sdk 0.3 + compat).
+"""E2E: gateway A2AClient (v1.0 wire) <-> samples/adk/ (a2a-sdk 0.3 + compat).
 
-Spawns the ADK sample in its own uv venv, waits for the agent-card endpoint,
-then exercises the gateway's outbound A2A client against it. Verifies the
-v1.0-to-v0.3-compat path works end-to-end.
-
-Skipped by default (live marker). Requires Gemini credentials configured for
-the ADK Agent (GOOGLE_API_KEY or GOOGLE_GENAI_USE_VERTEXAI=TRUE plus
-GOOGLE_CLOUD_PROJECT/GOOGLE_CLOUD_LOCATION).
+Spawns the ADK sample in its own uv venv (separate from the gateway venv,
+since a2a-sdk 0.3 cannot coexist with the gateway's 1.0). The agent-card
+test runs by default and proves the v0.3 backward-compat fixture is alive.
+The LLM round-trip test is gated on Gemini credentials.
 """
 
 from __future__ import annotations
@@ -65,13 +62,6 @@ def _wait_for_server(url: str, timeout: float = 90, interval: float = 1.0) -> bo
 
 @pytest.fixture(scope="session")
 def adk_sample() -> Iterator[str]:
-    if not _has_gemini_creds():
-        pytest.skip(
-            "Missing Gemini credentials: set GOOGLE_API_KEY, or set "
-            "GOOGLE_GENAI_USE_VERTEXAI=TRUE plus GOOGLE_CLOUD_PROJECT and "
-            "GOOGLE_CLOUD_LOCATION."
-        )
-
     proc = subprocess.Popen(
         ["uv", "run", "--project", str(ADK_SAMPLE_DIR), "python", "adk_dummy.py"],
         cwd=str(ADK_SAMPLE_DIR),
@@ -94,7 +84,7 @@ def adk_sample() -> Iterator[str]:
         proc.wait(timeout=5)
         pytest.fail(
             f"ADK sample did not start within 90s - is `uv sync` complete in "
-            f"{ADK_SAMPLE_DIR}? Did Gemini credentials reach the subprocess?"
+            f"{ADK_SAMPLE_DIR}?"
         )
 
     yield ADK_SAMPLE_BASE
@@ -107,7 +97,6 @@ def adk_sample() -> Iterator[str]:
         proc.wait()
 
 
-@pytest.mark.live
 @pytest.mark.asyncio
 async def test_agent_card_served(adk_sample: str) -> None:
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -115,6 +104,10 @@ async def test_agent_card_served(adk_sample: str) -> None:
     assert resp.status_code == 200
     card = resp.json()
     assert card["name"] == "adk_dummy_agent"
+    assert card.get("protocolVersion", "").startswith("0.3"), (
+        f"expected v0.3 backward-compat fixture, got protocolVersion="
+        f"{card.get('protocolVersion')!r}"
+    )
 
 
 @pytest.mark.live
@@ -126,6 +119,13 @@ async def test_gateway_v1_client_against_adk_v03_compat(adk_sample: str) -> None
     header, and v1.0 Part shape are accepted by the ADK server's compat
     layer; the response wire shape is parsed correctly by our client.
     """
+    if not _has_gemini_creds():
+        pytest.skip(
+            "Missing Gemini credentials: set GOOGLE_API_KEY, or set "
+            "GOOGLE_GENAI_USE_VERTEXAI=TRUE plus GOOGLE_CLOUD_PROJECT and "
+            "GOOGLE_CLOUD_LOCATION."
+        )
+
     client = A2AClient(adk_sample)
     try:
         resp = await client.send_message(
