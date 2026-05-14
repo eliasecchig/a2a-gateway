@@ -210,7 +210,9 @@ class TestBuildPushAgentCard:
 
     def test_card_advertises_absolute_url_when_base_url_set(self):
         router = _make_router(MockAdapter(channel_name="alpha"))
-        card = build_push_agent_card(router, public_base_url="https://gateway.example.com")
+        card = build_push_agent_card(
+            router, public_base_url="https://gateway.example.com"
+        )
 
         iface = card.supported_interfaces[0]
         assert iface.url == f"https://gateway.example.com{PUSH_PATH}"
