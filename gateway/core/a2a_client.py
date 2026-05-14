@@ -198,19 +198,29 @@ class A2AClient:
             timeout=httpx.Timeout(60.0, read=_STREAM_READ_TIMEOUT),
         ) as resp:
             resp.raise_for_status()
+            event_type: str | None = None
             async for line in resp.aiter_lines():
+                if line == "":
+                    event_type = None
+                    continue
+                if line.startswith("event:"):
+                    event_type = line.split(":", 1)[1].strip()
+                    continue
                 if not line.startswith("data: "):
                     continue
                 data = line[6:]
                 if data == "[DONE]":
                     break
                 try:
-                    event = json.loads(data)
+                    body = json.loads(data)
                 except json.JSONDecodeError:
                     logger.warning("malformed SSE data, skipping: %s", data[:200])
                     continue
-                result = event.get("result", {})
-                yield A2AStreamEvent.from_result(result)
+                if event_type == "error":
+                    if "error" in body:
+                        raise A2AError(body["error"])
+                    continue
+                yield A2AStreamEvent.from_result(body.get("result", {}))
 
 
 class A2AStreamEvent:
