@@ -82,10 +82,12 @@ def _build_response(
         "jsonrpc": "2.0",
         "id": request_id,
         "result": {
-            "id": task_id,
-            "contextId": context_id,
-            "status": {"state": "TASK_STATE_COMPLETED"},
-            "artifacts": artifacts,
+            "task": {
+                "id": task_id,
+                "contextId": context_id,
+                "status": {"state": "TASK_STATE_COMPLETED"},
+                "artifacts": artifacts,
+            }
         },
     }
 

@@ -64,10 +64,12 @@ def _make_msg(channel: str = "slack") -> InboundMessage:
 class TestA2AStreamEvent:
     def test_from_result_working_state(self):
         result = {
-            "id": "task-1",
-            "contextId": "ctx-1",
-            "status": {"state": "TASK_STATE_WORKING"},
-            "artifacts": [{"parts": [{"text": "partial"}]}],
+            "task": {
+                "id": "task-1",
+                "contextId": "ctx-1",
+                "status": {"state": "TASK_STATE_WORKING"},
+                "artifacts": [{"parts": [{"text": "partial"}]}],
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "partial"
@@ -76,10 +78,12 @@ class TestA2AStreamEvent:
 
     def test_from_result_completed_state(self):
         result = {
-            "id": "task-1",
-            "contextId": "ctx-1",
-            "status": {"state": "TASK_STATE_COMPLETED"},
-            "artifacts": [{"parts": [{"text": "done"}]}],
+            "task": {
+                "id": "task-1",
+                "contextId": "ctx-1",
+                "status": {"state": "TASK_STATE_COMPLETED"},
+                "artifacts": [{"parts": [{"text": "done"}]}],
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "done"
@@ -87,30 +91,52 @@ class TestA2AStreamEvent:
 
     def test_from_result_failed_state(self):
         result = {
-            "status": {"state": "TASK_STATE_FAILED"},
+            "task": {
+                "status": {"state": "TASK_STATE_FAILED"},
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.is_final is True
 
     def test_non_final_ignores_status_message_text(self):
         result = {
-            "status": {
-                "state": "TASK_STATE_WORKING",
-                "message": {"parts": [{"text": "thinking"}]},
-            },
+            "task": {
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {"parts": [{"text": "thinking"}]},
+                },
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == ""
 
     def test_final_uses_status_message_fallback(self):
         result = {
-            "status": {
-                "state": "TASK_STATE_COMPLETED",
-                "message": {"parts": [{"text": "done"}]},
-            },
+            "task": {
+                "status": {
+                    "state": "TASK_STATE_COMPLETED",
+                    "message": {"parts": [{"text": "done"}]},
+                },
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "done"
+
+    def test_message_event_treated_as_final(self):
+        # StreamResponse can carry a Message event when the executor emits a
+        # final agent message without a Task. The wrapped Message is terminal.
+        result = {
+            "message": {
+                "messageId": "m1",
+                "contextId": "ctx-1",
+                "role": "ROLE_AGENT",
+                "parts": [{"text": "answer"}],
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "answer"
+        assert event.context_id == "ctx-1"
 
 
 class TestStreamingRouter:

@@ -48,7 +48,7 @@ def _unwrap_result(result: dict[str, Any]) -> dict[str, Any]:
             "contextId": msg.get("contextId"),
             "status": {"message": msg},
         }
-    return result
+    return {}
 
 
 def _extract_part_text(parts: list[dict[str, Any]]) -> str:
@@ -112,7 +112,7 @@ class A2AClient:
         self._request_id = itertools.count(1)
         self._auth = auth
 
-    async def _auth_headers(self) -> dict[str, str]:
+    async def _request_headers(self) -> dict[str, str]:
         headers = {_VERSION_HEADER: _PROTOCOL_VERSION}
         if self._auth is not None:
             headers.update(await self._auth.get_headers())
@@ -123,7 +123,7 @@ class A2AClient:
 
     async def get_agent_card(self) -> dict[str, Any]:
         url = self.server_url.rstrip("/") + self._agent_card_path
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         resp = await self._http.get(url, headers=headers)
         resp.raise_for_status()
         return resp.json()
@@ -141,7 +141,7 @@ class A2AClient:
             "params": _build_params(text, context_id, task_id),
         }
 
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         resp = await self._http.post(self.server_url, json=payload, headers=headers)
         resp.raise_for_status()
         body = resp.json()
@@ -164,7 +164,7 @@ class A2AClient:
             "params": _build_params(text, context_id, task_id),
         }
 
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         async with self._http.stream(
             "POST",
             self.server_url,

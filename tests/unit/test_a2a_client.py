@@ -19,9 +19,11 @@ class TestA2AClient:
                     "jsonrpc": "2.0",
                     "id": 1,
                     "result": {
-                        "id": "task-1",
-                        "contextId": "ctx-1",
-                        "artifacts": [{"parts": [{"text": "hi"}]}],
+                        "task": {
+                            "id": "task-1",
+                            "contextId": "ctx-1",
+                            "artifacts": [{"parts": [{"text": "hi"}]}],
+                        }
                     },
                 },
             )
@@ -48,9 +50,11 @@ class TestA2AClient:
                     "jsonrpc": "2.0",
                     "id": 1,
                     "result": {
-                        "id": "t1",
-                        "contextId": "c1",
-                        "artifacts": [{"parts": [{"text": "ok"}]}],
+                        "task": {
+                            "id": "t1",
+                            "contextId": "c1",
+                            "artifacts": [{"parts": [{"text": "ok"}]}],
+                        }
                     },
                 },
             )
@@ -95,9 +99,11 @@ class TestA2AClient:
 class TestA2AResponse:
     def test_from_result_text_from_artifacts(self):
         result = {
-            "id": "task-1",
-            "contextId": "ctx-1",
-            "artifacts": [{"parts": [{"text": "hello"}]}],
+            "task": {
+                "id": "task-1",
+                "contextId": "ctx-1",
+                "artifacts": [{"parts": [{"text": "hello"}]}],
+            }
         }
         resp = A2AResponse.from_result(result)
         assert resp.text == "hello"
@@ -106,11 +112,26 @@ class TestA2AResponse:
 
     def test_from_result_text_from_status_message(self):
         result = {
-            "id": "t1",
-            "status": {"message": {"parts": [{"text": "fallback"}]}},
+            "task": {
+                "id": "t1",
+                "status": {"message": {"parts": [{"text": "fallback"}]}},
+            }
         }
         resp = A2AResponse.from_result(result)
         assert resp.text == "fallback"
+
+    def test_from_result_text_from_message_wrapper(self):
+        result = {
+            "message": {
+                "messageId": "m1",
+                "contextId": "ctx-2",
+                "role": "ROLE_AGENT",
+                "parts": [{"text": "direct message"}],
+            }
+        }
+        resp = A2AResponse.from_result(result)
+        assert resp.text == "direct message"
+        assert resp.context_id == "ctx-2"
 
     def test_from_result_no_text(self):
         resp = A2AResponse.from_result({})
@@ -118,14 +139,16 @@ class TestA2AResponse:
 
     def test_from_result_file_attachments_extracted(self):
         result = {
-            "artifacts": [
-                {
-                    "parts": [
-                        {"text": "here"},
-                        {"url": "https://x.com/f.png", "mediaType": "image/png"},
-                    ]
-                }
-            ]
+            "task": {
+                "artifacts": [
+                    {
+                        "parts": [
+                            {"text": "here"},
+                            {"url": "https://x.com/f.png", "mediaType": "image/png"},
+                        ]
+                    }
+                ]
+            }
         }
         resp = A2AResponse.from_result(result)
         assert len(resp.attachments) == 1

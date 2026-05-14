@@ -38,13 +38,17 @@ def extract_file_parts(result: dict[str, Any]) -> list[Attachment]:
 
 def _extract_from_parts(parts: list[dict[str, Any]], out: list[Attachment]) -> None:
     for part in parts:
+        if "text" in part:
+            continue
+        if "url" not in part and "raw" not in part:
+            continue
         att = Attachment(
             mime_type=part.get("mediaType", "application/octet-stream"),
             filename=part.get("filename"),
         )
         if "url" in part:
             att.url = part["url"]
-        elif "raw" in part:
+        else:
             try:
                 raw = base64.b64decode(part["raw"])
             except (binascii.Error, ValueError):
@@ -52,6 +56,4 @@ def _extract_from_parts(parts: list[dict[str, Any]], out: list[Attachment]) -> N
                 continue
             att.data = raw
             att.size = len(raw)
-        else:
-            continue
         out.append(att)

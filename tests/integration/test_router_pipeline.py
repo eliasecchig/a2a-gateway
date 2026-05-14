@@ -33,10 +33,12 @@ def _a2a_result(
         "jsonrpc": "2.0",
         "id": 1,
         "result": {
-            "id": task_id,
-            "contextId": context_id,
-            "status": {"state": "TASK_STATE_COMPLETED"},
-            "artifacts": [{"parts": parts}],
+            "task": {
+                "id": task_id,
+                "contextId": context_id,
+                "status": {"state": "TASK_STATE_COMPLETED"},
+                "artifacts": [{"parts": parts}],
+            }
         },
     }
 
