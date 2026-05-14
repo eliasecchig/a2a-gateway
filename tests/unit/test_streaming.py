@@ -138,6 +138,78 @@ class TestA2AStreamEvent:
         assert event.text == "answer"
         assert event.context_id == "ctx-1"
 
+    def test_unwrap_status_update_event(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "thinking..."}],
+                    },
+                },
+                "final": False,
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.task_id == "abc"
+        assert event.context_id == "ctx-1"
+        assert event.is_final is False
+        assert event.text == "thinking..."
+
+    def test_unwrap_status_update_event_final_state(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_COMPLETED",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "done"}],
+                    },
+                },
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "done"
+
+    def test_unwrap_status_update_event_explicit_final_flag(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "done early"}],
+                    },
+                },
+                "final": True,
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "done early"
+
+    def test_unwrap_artifact_update_event(self):
+        result = {
+            "artifactUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "artifact": {"parts": [{"text": "partial answer"}]},
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.task_id == "abc"
+        assert event.context_id == "ctx-1"
+        assert event.is_final is False
+        assert event.text == "partial answer"
+
 
 class TestStreamingRouter:
     async def test_uses_streaming_when_supported(self):

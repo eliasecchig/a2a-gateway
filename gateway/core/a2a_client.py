@@ -37,6 +37,9 @@ _TERMINAL_STATES = (
     "TASK_STATE_CANCELED",
 )
 
+_FINAL_FLAG_KEY = "__a2a_final__"
+_FORCE_TEXT_KEY = "__a2a_force_text__"
+
 
 def _unwrap_result(result: dict[str, Any]) -> dict[str, Any]:
     if "task" in result and isinstance(result["task"], dict):
@@ -47,6 +50,27 @@ def _unwrap_result(result: dict[str, Any]) -> dict[str, Any]:
             "id": None,
             "contextId": msg.get("contextId"),
             "status": {"message": msg},
+        }
+    if "statusUpdate" in result and isinstance(result["statusUpdate"], dict):
+        update = result["statusUpdate"]
+        unwrapped: dict[str, Any] = {
+            "id": update.get("taskId"),
+            "contextId": update.get("contextId"),
+            "status": update.get("status", {}),
+            _FORCE_TEXT_KEY: True,
+        }
+        if update.get("final") is True:
+            unwrapped[_FINAL_FLAG_KEY] = True
+        return unwrapped
+    if "artifactUpdate" in result and isinstance(result["artifactUpdate"], dict):
+        update = result["artifactUpdate"]
+        artifact = update.get("artifact", {})
+        return {
+            "id": update.get("taskId"),
+            "contextId": update.get("contextId"),
+            "status": {"state": ""},
+            "artifacts": [artifact],
+            _FORCE_TEXT_KEY: True,
         }
     return {}
 
@@ -209,9 +233,17 @@ class A2AStreamEvent:
     def from_result(cls, result: dict[str, Any]) -> A2AStreamEvent:
         task = _unwrap_result(result)
         status = task.get("status", {})
-        is_final = status.get("state") in _TERMINAL_STATES or "message" in result
+        is_final = (
+            status.get("state") in _TERMINAL_STATES
+            or "message" in result
+            or task.get(_FINAL_FLAG_KEY) is True
+        )
+        force_text = task.get(_FORCE_TEXT_KEY) is True
 
-        text = _extract_text_from_task(task) if is_final else _extract_artifact_text(task)
+        if is_final or force_text:
+            text = _extract_text_from_task(task)
+        else:
+            text = _extract_artifact_text(task)
 
         return cls(
             text=text,
