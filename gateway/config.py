@@ -230,6 +230,7 @@ class GatewayConfig:
     a2a_auth: A2AAuthConfig | None = None
     host: str = "0.0.0.0"
     port: int = 8000
+    public_base_url: str | None = None
 
     slack_accounts: list[SlackAccountConfig] = field(default_factory=list)
     whatsapp_accounts: list[WhatsAppAccountConfig] = field(default_factory=list)
@@ -270,6 +271,7 @@ def load_config(path: str | Path = "config.yaml") -> GatewayConfig:
         a2a_auth=_build_optional(A2AAuthConfig, a2a.get("auth")),
         host=raw.get("host", "0.0.0.0"),
         port=raw.get("port", 8000),
+        public_base_url=raw.get("public_base_url"),
         slack_accounts=_parse_accounts(SlackAccountConfig, channels.get("slack")),
         whatsapp_accounts=_parse_accounts(
             WhatsAppAccountConfig, channels.get("whatsapp")
@@ -326,6 +328,8 @@ def _apply_env_overrides(cfg: GatewayConfig) -> None:
             cfg.port = int(val)
         except ValueError:
             raise ValueError(f"PORT must be an integer, got: {val!r}") from None
+    if val := env("GATEWAY_PUBLIC_BASE_URL"):
+        cfg.public_base_url = val
 
     if (token := env("SLACK_BOT_TOKEN")) and not cfg.slack_accounts:
         cfg.slack_accounts = [

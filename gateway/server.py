@@ -222,7 +222,7 @@ def create_app(
     for adapter in webhook_adapters:
         app.include_router(adapter.router)
 
-    mount_push_a2a_routes(app, router)
+    mount_push_a2a_routes(app, router, public_base_url=config.public_base_url)
 
     @app.get("/live")
     async def live() -> dict[str, str]:

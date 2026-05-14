@@ -29,6 +29,7 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import (
     AgentCapabilities,
     AgentCard,
+    AgentInterface,
     AgentSkill,
     Message,
     Part,
@@ -128,7 +129,9 @@ class GatewayPushExecutor(AgentExecutor):
         return None
 
 
-def build_push_agent_card(router: Router) -> AgentCard:
+def build_push_agent_card(
+    router: Router, public_base_url: str | None = None
+) -> AgentCard:
     skills = [
         AgentSkill(
             id=f"send_{name}",
@@ -143,6 +146,8 @@ def build_push_agent_card(router: Router) -> AgentCard:
         )
         for name in sorted(router.channels)
     ]
+    base = public_base_url.rstrip("/") if public_base_url else ""
+    interface_url = f"{base}{PUSH_PATH}"
     return AgentCard(
         name="a2a-gateway-push",
         description=(
@@ -155,11 +160,20 @@ def build_push_agent_card(router: Router) -> AgentCard:
         default_output_modes=["text"],
         capabilities=AgentCapabilities(streaming=False),
         skills=skills,
+        supported_interfaces=[
+            AgentInterface(
+                url=interface_url,
+                protocol_version="1.0",
+                protocol_binding="JSONRPC",
+            )
+        ],
     )
 
 
-def mount_push_a2a_routes(app: FastAPI, router: Router) -> None:
-    agent_card = build_push_agent_card(router)
+def mount_push_a2a_routes(
+    app: FastAPI, router: Router, public_base_url: str | None = None
+) -> None:
+    agent_card = build_push_agent_card(router, public_base_url=public_base_url)
     handler = DefaultRequestHandler(
         agent_executor=GatewayPushExecutor(router),
         task_store=InMemoryTaskStore(),

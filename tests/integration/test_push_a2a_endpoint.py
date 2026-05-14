@@ -119,3 +119,7 @@ async def test_push_a2a_serves_agent_card():
     skill_ids = [s["id"] for s in card.get("skills", [])]
     assert "send_alpha" in skill_ids
     assert "send_beta" in skill_ids
+
+    interfaces = card.get("supportedInterfaces") or []
+    assert interfaces, card
+    assert any("/push" in iface.get("url", "") for iface in interfaces)

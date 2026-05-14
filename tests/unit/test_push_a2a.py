@@ -184,3 +184,28 @@ class TestBuildPushAgentCard:
     def test_push_path_constant_starts_with_slash(self):
         assert PUSH_PATH.startswith("/")
         assert not PUSH_PATH.endswith("/")
+
+    def test_card_advertises_jsonrpc_interface_relative_by_default(self):
+        router = _make_router(MockAdapter(channel_name="alpha"))
+        card = build_push_agent_card(router)
+
+        assert len(card.supported_interfaces) >= 1
+        iface = card.supported_interfaces[0]
+        assert PUSH_PATH in iface.url
+        assert iface.protocol_version == "1.0"
+
+    def test_card_advertises_absolute_url_when_base_url_set(self):
+        router = _make_router(MockAdapter(channel_name="alpha"))
+        card = build_push_agent_card(router, public_base_url="https://gateway.example.com")
+
+        iface = card.supported_interfaces[0]
+        assert iface.url == f"https://gateway.example.com{PUSH_PATH}"
+
+    def test_card_strips_trailing_slash_from_base_url(self):
+        router = _make_router(MockAdapter(channel_name="alpha"))
+        card = build_push_agent_card(
+            router, public_base_url="https://gateway.example.com/"
+        )
+
+        iface = card.supported_interfaces[0]
+        assert iface.url == f"https://gateway.example.com{PUSH_PATH}"
