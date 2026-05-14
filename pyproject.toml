@@ -58,6 +58,7 @@ dev = [
 line-length = 90
 target-version = "py312"
 include = ["gateway/**/*.py", "samples/**/*.py", "tests/**/*.py"]
+exclude = ["samples/adk"]
 
 [tool.ruff.lint]
 preview = true

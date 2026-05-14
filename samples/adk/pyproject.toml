@@ -1,0 +1,9 @@
+[project]
+name = "a2a-gateway-adk-sample"
+version = "0.1.0"
+description = "ADK-based A2A v0.3 agent for testing the a2a-gateway's backward compatibility."
+requires-python = ">=3.12"
+dependencies = [
+    "google-adk[a2a]>=1.32",
+    "uvicorn>=0.34",
+]
