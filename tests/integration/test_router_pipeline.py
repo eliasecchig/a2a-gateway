@@ -26,7 +26,7 @@ def _a2a_result(
     context_id: str = "c1",
     file_parts: list | None = None,
 ):
-    parts = [{"kind": "text", "text": text}]
+    parts = [{"text": text}]
     if file_parts:
         parts.extend(file_parts)
     return {
@@ -35,6 +35,7 @@ def _a2a_result(
         "result": {
             "id": task_id,
             "contextId": context_id,
+            "status": {"state": "TASK_STATE_COMPLETED"},
             "artifacts": [{"parts": parts}],
         },
     }
@@ -135,10 +136,7 @@ class TestRouterPipeline:
     @respx.mock
     async def test_attachments_on_last_chunk(self):
         file_parts = [
-            {
-                "kind": "file",
-                "file": {"uri": "https://x.com/f.png", "mimeType": "image/png"},
-            }
+            {"url": "https://x.com/f.png", "mediaType": "image/png"},
         ]
         long_text = "word " * 1000
         respx.post(A2A_URL).mock(

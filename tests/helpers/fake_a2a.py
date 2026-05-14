@@ -11,14 +11,14 @@ def mock_a2a_success(
     task_id: str = "task-1",
     file_parts: list[dict] | None = None,
 ) -> respx.Route:
-    parts = [{"kind": "text", "text": text}]
+    parts = [{"text": text}]
     if file_parts:
         parts.extend(file_parts)
 
     result = {
         "id": task_id,
         "contextId": context_id,
-        "status": {"state": "completed"},
+        "status": {"state": "TASK_STATE_COMPLETED"},
         "artifacts": [{"parts": parts}],
     }
 

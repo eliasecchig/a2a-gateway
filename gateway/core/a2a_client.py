@@ -29,29 +29,47 @@ from gateway.core.media import extract_file_parts
 logger = logging.getLogger(__name__)
 
 _STREAM_READ_TIMEOUT = 300.0
+_VERSION_HEADER = "A2A-Version"
+_PROTOCOL_VERSION = "1.0"
+_TERMINAL_STATES = (
+    "TASK_STATE_COMPLETED",
+    "TASK_STATE_FAILED",
+    "TASK_STATE_CANCELED",
+)
 
 
-def _extract_artifact_text(result: dict[str, Any]) -> str:
+def _unwrap_result(result: dict[str, Any]) -> dict[str, Any]:
+    if "task" in result and isinstance(result["task"], dict):
+        return result["task"]
+    if "message" in result and isinstance(result["message"], dict):
+        msg = result["message"]
+        return {
+            "id": None,
+            "contextId": msg.get("contextId"),
+            "status": {"message": msg},
+        }
+    return result
+
+
+def _extract_part_text(parts: list[dict[str, Any]]) -> str:
+    return "".join(part["text"] for part in parts if "text" in part)
+
+
+def _extract_artifact_text(task: dict[str, Any]) -> str:
     parts_text: list[str] = []
-    for artifact in result.get("artifacts") or []:
-        for part in artifact.get("parts", []):
-            if part.get("kind") == "text":
-                parts_text.append(part.get("text", ""))
+    for artifact in task.get("artifacts") or []:
+        parts_text.append(_extract_part_text(artifact.get("parts", [])))
     return "".join(parts_text)
 
 
-def _extract_text_from_result(result: dict[str, Any]) -> str:
-    text = _extract_artifact_text(result)
+def _extract_text_from_task(task: dict[str, Any]) -> str:
+    text = _extract_artifact_text(task)
     if text:
         return text
 
-    status = result.get("status", {})
+    status = task.get("status", {})
     msg = status.get("message") or {}
-    parts_text: list[str] = []
-    for part in msg.get("parts", []):
-        if part.get("kind") == "text":
-            parts_text.append(part.get("text", ""))
-    return "".join(parts_text)
+    return _extract_part_text(msg.get("parts", []))
 
 
 def _build_params(
@@ -61,8 +79,8 @@ def _build_params(
 ) -> dict[str, Any]:
     params: dict[str, Any] = {
         "message": {
-            "role": "user",
-            "parts": [{"kind": "text", "text": text}],
+            "role": "ROLE_USER",
+            "parts": [{"text": text}],
             "messageId": uuid.uuid4().hex,
         },
     }
@@ -74,7 +92,7 @@ def _build_params(
 
 
 class A2AClient:
-    """Minimal A2A protocol client (JSON-RPC 2.0, message/send)."""
+    """Minimal A2A protocol client (JSON-RPC 2.0, A2A protocol v1.0)."""
 
     def __init__(
         self,
@@ -95,9 +113,10 @@ class A2AClient:
         self._auth = auth
 
     async def _auth_headers(self) -> dict[str, str]:
-        if self._auth is None:
-            return {}
-        return await self._auth.get_headers()
+        headers = {_VERSION_HEADER: _PROTOCOL_VERSION}
+        if self._auth is not None:
+            headers.update(await self._auth.get_headers())
+        return headers
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -118,7 +137,7 @@ class A2AClient:
         payload = {
             "jsonrpc": "2.0",
             "id": next(self._request_id),
-            "method": "message/send",
+            "method": "SendMessage",
             "params": _build_params(text, context_id, task_id),
         }
 
@@ -141,7 +160,7 @@ class A2AClient:
         payload = {
             "jsonrpc": "2.0",
             "id": next(self._request_id),
-            "method": "message/stream",
+            "method": "SendStreamingMessage",
             "params": _build_params(text, context_id, task_id),
         }
 
@@ -188,22 +207,19 @@ class A2AStreamEvent:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AStreamEvent:
-        status = result.get("status", {})
-        is_final = status.get("state") in ("completed", "failed", "canceled")
+        task = _unwrap_result(result)
+        status = task.get("status", {})
+        is_final = status.get("state") in _TERMINAL_STATES or "message" in result
 
-        text = (
-            _extract_text_from_result(result)
-            if is_final
-            else _extract_artifact_text(result)
-        )
+        text = _extract_text_from_task(task) if is_final else _extract_artifact_text(task)
 
         return cls(
             text=text,
             is_final=is_final,
-            context_id=result.get("contextId"),
-            task_id=result.get("id"),
+            context_id=task.get("contextId"),
+            task_id=task.get("id"),
             raw=result,
-            attachments=extract_file_parts(result) if is_final else [],
+            attachments=extract_file_parts(task) if is_final else [],
         )
 
 
@@ -224,14 +240,15 @@ class A2AResponse:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AResponse:
-        text = _extract_text_from_result(result) or "(no response)"
+        task = _unwrap_result(result)
+        text = _extract_text_from_task(task) or "(no response)"
 
         return cls(
             text=text,
-            context_id=result.get("contextId"),
-            task_id=result.get("id"),
+            context_id=task.get("contextId"),
+            task_id=task.get("id"),
             raw=result,
-            attachments=extract_file_parts(result),
+            attachments=extract_file_parts(task),
         )
 
 

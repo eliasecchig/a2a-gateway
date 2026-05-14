@@ -38,21 +38,20 @@ def extract_file_parts(result: dict[str, Any]) -> list[Attachment]:
 
 def _extract_from_parts(parts: list[dict[str, Any]], out: list[Attachment]) -> None:
     for part in parts:
-        if part.get("kind") != "file":
-            continue
-        file_info = part.get("file", {})
         att = Attachment(
-            mime_type=file_info.get("mimeType", "application/octet-stream"),
-            filename=file_info.get("name"),
+            mime_type=part.get("mediaType", "application/octet-stream"),
+            filename=part.get("filename"),
         )
-        if "uri" in file_info:
-            att.url = file_info["uri"]
-        elif "bytes" in file_info:
+        if "url" in part:
+            att.url = part["url"]
+        elif "raw" in part:
             try:
-                raw = base64.b64decode(file_info["bytes"])
+                raw = base64.b64decode(part["raw"])
             except (binascii.Error, ValueError):
                 logger.warning("malformed base64 in file part, skipping")
                 continue
             att.data = raw
             att.size = len(raw)
+        else:
+            continue
         out.append(att)

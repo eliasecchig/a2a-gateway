@@ -21,7 +21,7 @@ class TestA2AClient:
                     "result": {
                         "id": "task-1",
                         "contextId": "ctx-1",
-                        "artifacts": [{"parts": [{"kind": "text", "text": "hi"}]}],
+                        "artifacts": [{"parts": [{"text": "hi"}]}],
                     },
                 },
             )
@@ -32,9 +32,11 @@ class TestA2AClient:
 
         request = route.calls.last.request
         body = request.extensions.get("json") or __import__("json").loads(request.content)
-        assert body["method"] == "message/send"
+        assert body["method"] == "SendMessage"
         assert body["jsonrpc"] == "2.0"
         assert body["params"]["message"]["parts"][0]["text"] == "hello"
+        assert "kind" not in body["params"]["message"]["parts"][0]
+        assert request.headers["A2A-Version"] == "1.0"
         await client.close()
 
     @respx.mock
@@ -48,7 +50,7 @@ class TestA2AClient:
                     "result": {
                         "id": "t1",
                         "contextId": "c1",
-                        "artifacts": [{"parts": [{"kind": "text", "text": "ok"}]}],
+                        "artifacts": [{"parts": [{"text": "ok"}]}],
                     },
                 },
             )
@@ -95,7 +97,7 @@ class TestA2AResponse:
         result = {
             "id": "task-1",
             "contextId": "ctx-1",
-            "artifacts": [{"parts": [{"kind": "text", "text": "hello"}]}],
+            "artifacts": [{"parts": [{"text": "hello"}]}],
         }
         resp = A2AResponse.from_result(result)
         assert resp.text == "hello"
@@ -105,7 +107,7 @@ class TestA2AResponse:
     def test_from_result_text_from_status_message(self):
         result = {
             "id": "t1",
-            "status": {"message": {"parts": [{"kind": "text", "text": "fallback"}]}},
+            "status": {"message": {"parts": [{"text": "fallback"}]}},
         }
         resp = A2AResponse.from_result(result)
         assert resp.text == "fallback"
@@ -119,14 +121,8 @@ class TestA2AResponse:
             "artifacts": [
                 {
                     "parts": [
-                        {"kind": "text", "text": "here"},
-                        {
-                            "kind": "file",
-                            "file": {
-                                "uri": "https://x.com/f.png",
-                                "mimeType": "image/png",
-                            },
-                        },
+                        {"text": "here"},
+                        {"url": "https://x.com/f.png", "mediaType": "image/png"},
                     ]
                 }
             ]

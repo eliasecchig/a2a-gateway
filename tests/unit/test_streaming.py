@@ -66,8 +66,8 @@ class TestA2AStreamEvent:
         result = {
             "id": "task-1",
             "contextId": "ctx-1",
-            "status": {"state": "working"},
-            "artifacts": [{"parts": [{"kind": "text", "text": "partial"}]}],
+            "status": {"state": "TASK_STATE_WORKING"},
+            "artifacts": [{"parts": [{"text": "partial"}]}],
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "partial"
@@ -78,8 +78,8 @@ class TestA2AStreamEvent:
         result = {
             "id": "task-1",
             "contextId": "ctx-1",
-            "status": {"state": "completed"},
-            "artifacts": [{"parts": [{"kind": "text", "text": "done"}]}],
+            "status": {"state": "TASK_STATE_COMPLETED"},
+            "artifacts": [{"parts": [{"text": "done"}]}],
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "done"
@@ -87,7 +87,7 @@ class TestA2AStreamEvent:
 
     def test_from_result_failed_state(self):
         result = {
-            "status": {"state": "failed"},
+            "status": {"state": "TASK_STATE_FAILED"},
         }
         event = A2AStreamEvent.from_result(result)
         assert event.is_final is True
@@ -95,8 +95,8 @@ class TestA2AStreamEvent:
     def test_non_final_ignores_status_message_text(self):
         result = {
             "status": {
-                "state": "working",
-                "message": {"parts": [{"kind": "text", "text": "thinking"}]},
+                "state": "TASK_STATE_WORKING",
+                "message": {"parts": [{"text": "thinking"}]},
             },
         }
         event = A2AStreamEvent.from_result(result)
@@ -105,8 +105,8 @@ class TestA2AStreamEvent:
     def test_final_uses_status_message_fallback(self):
         result = {
             "status": {
-                "state": "completed",
-                "message": {"parts": [{"kind": "text", "text": "done"}]},
+                "state": "TASK_STATE_COMPLETED",
+                "message": {"parts": [{"text": "done"}]},
             },
         }
         event = A2AStreamEvent.from_result(result)
