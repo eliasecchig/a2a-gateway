@@ -210,6 +210,17 @@ class TestA2AStreamEvent:
         assert event.is_final is False
         assert event.text == "partial answer"
 
+    def test_rejected_state_is_terminal(self):
+        result = {
+            "task": {
+                "id": "t",
+                "contextId": "c",
+                "status": {"state": "TASK_STATE_REJECTED"},
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+
 
 class TestStreamingRouter:
     async def test_uses_streaming_when_supported(self):
