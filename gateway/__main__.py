@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entry point: starts the gateway (and optionally the dummy A2A agent)."""
+"""Entry point: starts the gateway (and optionally the dummy echo agent)."""
 
 import argparse
 import logging
@@ -33,9 +33,9 @@ from gateway.server import create_app
 
 
 def run_agent(port: int) -> None:
-    from agent.dummy import app
+    from samples.dummy_agent import build_app
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(build_app(), host="0.0.0.0", port=port)
 
 
 def main() -> None:
@@ -44,7 +44,7 @@ def main() -> None:
     parser.add_argument(
         "--with-agent",
         action="store_true",
-        help="Also start the dummy ADK agent on port 8001",
+        help="Also start the dummy echo agent on port 8001",
     )
     parser.add_argument(
         "--agent-port", type=int, default=8001, help="Port for the dummy agent"
