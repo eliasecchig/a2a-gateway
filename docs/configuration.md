@@ -144,7 +144,7 @@ These features run out of the box with sensible defaults. No config needed, but 
 | **Rate limiting** | 60 req/min (A2A), 30 req/min (channel) | Protects both sides with exponential backoff retries |
 | **Streaming** | enabled, 500ms update interval | Edits messages in-place as tokens arrive (if agent supports it) |
 | **Health endpoints** | 5 min stale timeout | `/live`, `/ready`, `/health` for k8s probes |
-| **Outbound push** | always on | [`POST /push`](push-api.md) sends messages through any channel without an inbound trigger |
+| **Outbound push** | always on | [`POST /push`](push-api.md) — A2A JSON-RPC endpoint that delivers messages through any channel without an inbound trigger |
 | **Session management** | 30 min idle timeout | Tracks conversation context, cleans up idle sessions |
 | **Concurrency limits** | 5 per conversation | Prevents a single conversation from overloading the agent |
 | **Capability discovery** | always on | Fetches the agent card on startup, adapts automatically |
