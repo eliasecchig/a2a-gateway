@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from unittest.mock import AsyncMock
 
@@ -147,6 +148,19 @@ class TestGatewayPushExecutor:
         queue = AsyncMock()
 
         with pytest.raises(PushRoutingError, match="adapter send failed"):
+            await executor.execute(_make_context(message), queue)
+
+    async def test_executor_does_not_swallow_cancellation(self):
+        adapter = MockAdapter(channel_name="test")
+        adapter.send = AsyncMock(side_effect=asyncio.CancelledError("shutdown"))
+        executor = GatewayPushExecutor(_make_router(adapter))
+        message = _make_inbound_message(
+            "hi",
+            **{CHANNEL_KEY: "test", RECIPIENT_KEY: "U1"},
+        )
+        queue = AsyncMock()
+
+        with pytest.raises(asyncio.CancelledError):
             await executor.execute(_make_context(message), queue)
 
     async def test_executor_rejects_empty_optional_metadata(self):

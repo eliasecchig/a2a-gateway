@@ -20,6 +20,7 @@ import logging
 import uuid
 from typing import TYPE_CHECKING
 
+import httpx
 from a2a.helpers import get_message_text
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -111,7 +112,7 @@ class GatewayPushExecutor(AgentExecutor):
         )
         try:
             message_id = await adapter.send(outbound)
-        except Exception as exc:
+        except (OSError, httpx.HTTPError, RuntimeError, ValueError) as exc:
             logger.exception("push delivery failed on channel %s", channel)
             raise PushRoutingError(f"adapter send failed: {exc}") from exc
 
