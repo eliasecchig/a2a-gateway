@@ -39,3 +39,22 @@ jobs:
 
       - name: Run tests
         run: uv run pytest tests/ -v
+
+  live-email:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run live email tests
+        run: uv run pytest -m live tests/live/test_email_live.py -v
