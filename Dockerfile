@@ -7,7 +7,7 @@ COPY pyproject.toml uv.lock* ./
 RUN uv sync --no-dev --no-install-project
 
 COPY gateway/ gateway/
-COPY agent/ agent/
+COPY samples/__init__.py samples/dummy_agent.py samples/
 
 RUN uv sync --no-dev
 
