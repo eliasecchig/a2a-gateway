@@ -16,6 +16,7 @@ This is the recommended approach for Docker and CI. Set only the variables you n
 | `PORT` | `8000` | Listen port (matches Cloud Run convention) |
 | `A2A_AUTH` | - | Auth mode: `google_id_token`, `google_access_token`, or `token` |
 | `A2A_AUTH_TOKEN` | - | Static bearer token (when `A2A_AUTH=token`) |
+| `GATEWAY_PUBLIC_BASE_URL` | - | Public base URL the gateway is reachable at (e.g. `https://gw.example.com`). When set, the [push agent card](push-api.md) advertises absolute URLs in `supportedInterfaces`; otherwise relative URLs are used. |
 
 **Slack:**
 

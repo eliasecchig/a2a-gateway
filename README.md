@@ -56,10 +56,9 @@ cp config.example.yaml config.yaml
 uv run a2a-gateway --config config.yaml
 ```
 
-Or with the built-in test agent (uses Gemini, requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)):
+Or with the built-in test agent (a minimal A2A echo server — no LLM, no credentials needed):
 
 ```bash
-gcloud auth application-default login
 uv run a2a-gateway --with-agent
 ```
 
