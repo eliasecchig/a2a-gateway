@@ -156,4 +156,4 @@ class MyWebhookChannel(SimpleChannel):
 ## See also
 
 - [Configuration](configuration.md) — per-channel feature flags, rate limit overrides
-- [Push API](push-api.md) — send messages to your custom channel via `POST /push`
+- [Push API](push-api.md) — send messages to your custom channel via the A2A endpoint at `POST /push`

@@ -16,8 +16,12 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
+import pytest
+import respx
+from httpx import Response
+
 from gateway.config import StreamingConfig, load_config
-from gateway.core.a2a_client import A2AClient, A2AStreamEvent
+from gateway.core.a2a_client import A2AClient, A2AError, A2AStreamEvent
 from gateway.core.capabilities import AgentCapabilities
 from gateway.core.rate_limit import BackoffConfig
 from gateway.core.router import Router
@@ -64,10 +68,12 @@ def _make_msg(channel: str = "slack") -> InboundMessage:
 class TestA2AStreamEvent:
     def test_from_result_working_state(self):
         result = {
-            "id": "task-1",
-            "contextId": "ctx-1",
-            "status": {"state": "working"},
-            "artifacts": [{"parts": [{"kind": "text", "text": "partial"}]}],
+            "task": {
+                "id": "task-1",
+                "contextId": "ctx-1",
+                "status": {"state": "TASK_STATE_WORKING"},
+                "artifacts": [{"parts": [{"text": "partial"}]}],
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "partial"
@@ -76,10 +82,12 @@ class TestA2AStreamEvent:
 
     def test_from_result_completed_state(self):
         result = {
-            "id": "task-1",
-            "contextId": "ctx-1",
-            "status": {"state": "completed"},
-            "artifacts": [{"parts": [{"kind": "text", "text": "done"}]}],
+            "task": {
+                "id": "task-1",
+                "contextId": "ctx-1",
+                "status": {"state": "TASK_STATE_COMPLETED"},
+                "artifacts": [{"parts": [{"text": "done"}]}],
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "done"
@@ -87,30 +95,183 @@ class TestA2AStreamEvent:
 
     def test_from_result_failed_state(self):
         result = {
-            "status": {"state": "failed"},
+            "task": {
+                "status": {"state": "TASK_STATE_FAILED"},
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.is_final is True
 
     def test_non_final_ignores_status_message_text(self):
         result = {
-            "status": {
-                "state": "working",
-                "message": {"parts": [{"kind": "text", "text": "thinking"}]},
-            },
+            "task": {
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {"parts": [{"text": "thinking"}]},
+                },
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == ""
 
     def test_final_uses_status_message_fallback(self):
         result = {
-            "status": {
-                "state": "completed",
-                "message": {"parts": [{"kind": "text", "text": "done"}]},
-            },
+            "task": {
+                "status": {
+                    "state": "TASK_STATE_COMPLETED",
+                    "message": {"parts": [{"text": "done"}]},
+                },
+            }
         }
         event = A2AStreamEvent.from_result(result)
         assert event.text == "done"
+
+    def test_message_event_treated_as_final(self):
+        # StreamResponse can carry a Message event when the executor emits a
+        # final agent message without a Task. The wrapped Message is terminal.
+        result = {
+            "message": {
+                "messageId": "m1",
+                "contextId": "ctx-1",
+                "role": "ROLE_AGENT",
+                "parts": [{"text": "answer"}],
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "answer"
+        assert event.context_id == "ctx-1"
+
+    def test_unwrap_status_update_event(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "thinking..."}],
+                    },
+                },
+                "final": False,
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.task_id == "abc"
+        assert event.context_id == "ctx-1"
+        assert event.is_final is False
+        assert event.text == "thinking..."
+
+    def test_unwrap_status_update_event_final_state(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_COMPLETED",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "done"}],
+                    },
+                },
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "done"
+
+    def test_unwrap_status_update_event_explicit_final_flag(self):
+        result = {
+            "statusUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "status": {
+                    "state": "TASK_STATE_WORKING",
+                    "message": {
+                        "role": "ROLE_AGENT",
+                        "parts": [{"text": "done early"}],
+                    },
+                },
+                "final": True,
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+        assert event.text == "done early"
+
+    def test_unwrap_artifact_update_event(self):
+        result = {
+            "artifactUpdate": {
+                "taskId": "abc",
+                "contextId": "ctx-1",
+                "artifact": {"parts": [{"text": "partial answer"}]},
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.task_id == "abc"
+        assert event.context_id == "ctx-1"
+        assert event.is_final is False
+        assert event.text == "partial answer"
+
+    def test_rejected_state_is_terminal(self):
+        result = {
+            "task": {
+                "id": "t",
+                "contextId": "c",
+                "status": {"state": "TASK_STATE_REJECTED"},
+            }
+        }
+        event = A2AStreamEvent.from_result(result)
+        assert event.is_final is True
+
+
+@pytest.mark.asyncio
+class TestSendMessageStream:
+    @respx.mock
+    async def test_send_message_stream_raises_on_error_event(self):
+        sse_body = (
+            "event: error\n"
+            'data: {"jsonrpc":"2.0","id":1,'
+            '"error":{"code":-32603,"message":"executor blew up"}}\n'
+            "\n"
+        )
+        respx.post("http://localhost:8001").mock(
+            return_value=Response(
+                200,
+                content=sse_body,
+                headers={"content-type": "text/event-stream"},
+            )
+        )
+        client = A2AClient("http://localhost:8001")
+        with pytest.raises(A2AError, match="executor blew up"):
+            async for _ in client.send_message_stream("hi"):
+                pass
+        await client.close()
+
+    @respx.mock
+    async def test_send_message_stream_yields_after_event_block(self):
+        sse_body = (
+            "event: error\n"
+            'data: {"error":{"code":-32603,"message":"first"}}\n'
+            "\n"
+            'data: {"result":{"task":{"id":"t1","contextId":"c1",'
+            '"status":{"state":"TASK_STATE_COMPLETED"},'
+            '"artifacts":[{"parts":[{"text":"after"}]}]}}}\n'
+            "\n"
+        )
+        respx.post("http://localhost:8001").mock(
+            return_value=Response(
+                200,
+                content=sse_body,
+                headers={"content-type": "text/event-stream"},
+            )
+        )
+        client = A2AClient("http://localhost:8001")
+        with pytest.raises(A2AError, match="first"):
+            async for _ in client.send_message_stream("hi"):
+                pass
+        await client.close()
 
 
 class TestStreamingRouter:

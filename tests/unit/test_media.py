@@ -6,18 +6,15 @@ from gateway.core.media import extract_file_parts
 
 
 class TestExtractFileParts:
-    def test_file_with_uri(self):
+    def test_file_with_url(self):
         result = {
             "artifacts": [
                 {
                     "parts": [
                         {
-                            "kind": "file",
-                            "file": {
-                                "uri": "https://example.com/f.png",
-                                "mimeType": "image/png",
-                                "name": "f.png",
-                            },
+                            "url": "https://example.com/f.png",
+                            "mediaType": "image/png",
+                            "filename": "f.png",
                         },
                     ]
                 }
@@ -29,17 +26,14 @@ class TestExtractFileParts:
         assert atts[0].mime_type == "image/png"
         assert atts[0].filename == "f.png"
 
-    def test_file_with_base64_bytes(self):
+    def test_file_with_base64_raw(self):
         raw = b"hello binary"
         encoded = base64.b64encode(raw).decode()
         result = {
             "artifacts": [
                 {
                     "parts": [
-                        {
-                            "kind": "file",
-                            "file": {"bytes": encoded, "mimeType": "application/pdf"},
-                        },
+                        {"raw": encoded, "mediaType": "application/pdf"},
                     ]
                 }
             ]
@@ -56,11 +50,8 @@ class TestExtractFileParts:
                 "message": {
                     "parts": [
                         {
-                            "kind": "file",
-                            "file": {
-                                "uri": "https://example.com/report.pdf",
-                                "mimeType": "application/pdf",
-                            },
+                            "url": "https://example.com/report.pdf",
+                            "mediaType": "application/pdf",
                         },
                     ]
                 }
@@ -75,13 +66,10 @@ class TestExtractFileParts:
             "artifacts": [
                 {
                     "parts": [
-                        {"kind": "text", "text": "Here is your file"},
+                        {"text": "Here is your file"},
                         {
-                            "kind": "file",
-                            "file": {
-                                "uri": "https://example.com/f.png",
-                                "mimeType": "image/png",
-                            },
+                            "url": "https://example.com/f.png",
+                            "mediaType": "image/png",
                         },
                     ]
                 }
@@ -91,16 +79,12 @@ class TestExtractFileParts:
         assert len(atts) == 1
 
     def test_no_file_parts_empty_list(self):
-        result = {"artifacts": [{"parts": [{"kind": "text", "text": "just text"}]}]}
+        result = {"artifacts": [{"parts": [{"text": "just text"}]}]}
         assert extract_file_parts(result) == []
 
     def test_empty_result(self):
         assert extract_file_parts({}) == []
 
-    def test_malformed_file_info_still_extracted(self):
-        result = {"artifacts": [{"parts": [{"kind": "file", "file": {}}]}]}
-        atts = extract_file_parts(result)
-        assert len(atts) == 1
-        assert atts[0].mime_type == "application/octet-stream"
-        assert atts[0].url is None
-        assert atts[0].data is None
+    def test_part_without_url_or_raw_skipped(self):
+        result = {"artifacts": [{"parts": [{"mediaType": "image/png"}]}]}
+        assert extract_file_parts(result) == []

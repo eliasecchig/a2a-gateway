@@ -28,14 +28,14 @@ jobs:
 
       - name: Lint
         run: |
-          uv run ruff check gateway/ agent/ tests/
-          uv run ruff format --check gateway/ agent/ tests/
+          uv run ruff check gateway/ samples/ tests/
+          uv run ruff format --check gateway/ samples/ tests/
 
       - name: Type check
-        run: uv run ty check gateway/ agent/
+        run: uv run ty check gateway/ samples/
 
       - name: Spell check
-        run: uv run codespell gateway/ agent/ tests/
+        run: uv run codespell gateway/ samples/ tests/
 
       - name: Run tests
         run: uv run pytest tests/ -v

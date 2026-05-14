@@ -16,6 +16,7 @@ This is the recommended approach for Docker and CI. Set only the variables you n
 | `PORT` | `8000` | Listen port (matches Cloud Run convention) |
 | `A2A_AUTH` | - | Auth mode: `google_id_token`, `google_access_token`, or `token` |
 | `A2A_AUTH_TOKEN` | - | Static bearer token (when `A2A_AUTH=token`) |
+| `GATEWAY_PUBLIC_BASE_URL` | - | Public base URL the gateway is reachable at (e.g. `https://gw.example.com`). When set, the [push agent card](push-api.md) advertises absolute URLs in `supportedInterfaces`; otherwise relative URLs are used. |
 
 **Slack:**
 
@@ -144,7 +145,7 @@ These features run out of the box with sensible defaults. No config needed, but 
 | **Rate limiting** | 60 req/min (A2A), 30 req/min (channel) | Protects both sides with exponential backoff retries |
 | **Streaming** | enabled, 500ms update interval | Edits messages in-place as tokens arrive (if agent supports it) |
 | **Health endpoints** | 5 min stale timeout | `/live`, `/ready`, `/health` for k8s probes |
-| **Outbound push** | always on | [`POST /push`](push-api.md) sends messages through any channel without an inbound trigger |
+| **Outbound push** | always on | [`POST /push`](push-api.md) — A2A JSON-RPC endpoint that delivers messages through any channel without an inbound trigger |
 | **Session management** | 30 min idle timeout | Tracks conversation context, cleans up idle sessions |
 | **Concurrency limits** | 5 per conversation | Prevents a single conversation from overloading the agent |
 | **Capability discovery** | always on | Fetches the agent card on startup, adapts automatically |

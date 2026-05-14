@@ -11,21 +11,21 @@ def mock_a2a_success(
     task_id: str = "task-1",
     file_parts: list[dict] | None = None,
 ) -> respx.Route:
-    parts = [{"kind": "text", "text": text}]
+    parts = [{"text": text}]
     if file_parts:
         parts.extend(file_parts)
 
-    result = {
+    task = {
         "id": task_id,
         "contextId": context_id,
-        "status": {"state": "completed"},
+        "status": {"state": "TASK_STATE_COMPLETED"},
         "artifacts": [{"parts": parts}],
     }
 
     return respx.post(base_url).mock(
         return_value=Response(
             200,
-            json={"jsonrpc": "2.0", "id": 1, "result": result},
+            json={"jsonrpc": "2.0", "id": 1, "result": {"task": task}},
         )
     )
 

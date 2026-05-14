@@ -29,29 +29,72 @@ from gateway.core.media import extract_file_parts
 logger = logging.getLogger(__name__)
 
 _STREAM_READ_TIMEOUT = 300.0
+_VERSION_HEADER = "A2A-Version"
+_PROTOCOL_VERSION = "1.0"
+_TERMINAL_STATES = (
+    "TASK_STATE_COMPLETED",
+    "TASK_STATE_FAILED",
+    "TASK_STATE_CANCELED",
+    "TASK_STATE_REJECTED",
+)
+
+_FINAL_FLAG_KEY = "__a2a_final__"
+_FORCE_TEXT_KEY = "__a2a_force_text__"
 
 
-def _extract_artifact_text(result: dict[str, Any]) -> str:
+def _unwrap_result(result: dict[str, Any]) -> dict[str, Any]:
+    if "task" in result and isinstance(result["task"], dict):
+        return result["task"]
+    if "message" in result and isinstance(result["message"], dict):
+        msg = result["message"]
+        return {
+            "id": None,
+            "contextId": msg.get("contextId"),
+            "status": {"message": msg},
+        }
+    if "statusUpdate" in result and isinstance(result["statusUpdate"], dict):
+        update = result["statusUpdate"]
+        unwrapped: dict[str, Any] = {
+            "id": update.get("taskId"),
+            "contextId": update.get("contextId"),
+            "status": update.get("status", {}),
+            _FORCE_TEXT_KEY: True,
+        }
+        if update.get("final") is True:
+            unwrapped[_FINAL_FLAG_KEY] = True
+        return unwrapped
+    if "artifactUpdate" in result and isinstance(result["artifactUpdate"], dict):
+        update = result["artifactUpdate"]
+        artifact = update.get("artifact", {})
+        return {
+            "id": update.get("taskId"),
+            "contextId": update.get("contextId"),
+            "status": {"state": ""},
+            "artifacts": [artifact],
+            _FORCE_TEXT_KEY: True,
+        }
+    return {}
+
+
+def _extract_part_text(parts: list[dict[str, Any]]) -> str:
+    return "".join(part["text"] for part in parts if "text" in part)
+
+
+def _extract_artifact_text(task: dict[str, Any]) -> str:
     parts_text: list[str] = []
-    for artifact in result.get("artifacts") or []:
-        for part in artifact.get("parts", []):
-            if part.get("kind") == "text":
-                parts_text.append(part.get("text", ""))
+    for artifact in task.get("artifacts") or []:
+        parts_text.append(_extract_part_text(artifact.get("parts", [])))
     return "".join(parts_text)
 
 
-def _extract_text_from_result(result: dict[str, Any]) -> str:
-    text = _extract_artifact_text(result)
+def _extract_text_from_task(task: dict[str, Any]) -> str:
+    text = _extract_artifact_text(task)
     if text:
         return text
 
-    status = result.get("status", {})
+    status = task.get("status", {})
     msg = status.get("message") or {}
-    parts_text: list[str] = []
-    for part in msg.get("parts", []):
-        if part.get("kind") == "text":
-            parts_text.append(part.get("text", ""))
-    return "".join(parts_text)
+    return _extract_part_text(msg.get("parts", []))
 
 
 def _build_params(
@@ -61,8 +104,8 @@ def _build_params(
 ) -> dict[str, Any]:
     params: dict[str, Any] = {
         "message": {
-            "role": "user",
-            "parts": [{"kind": "text", "text": text}],
+            "role": "ROLE_USER",
+            "parts": [{"text": text}],
             "messageId": uuid.uuid4().hex,
         },
     }
@@ -74,7 +117,7 @@ def _build_params(
 
 
 class A2AClient:
-    """Minimal A2A protocol client (JSON-RPC 2.0, message/send)."""
+    """Minimal A2A protocol client (JSON-RPC 2.0, A2A protocol v1.0)."""
 
     def __init__(
         self,
@@ -94,17 +137,18 @@ class A2AClient:
         self._request_id = itertools.count(1)
         self._auth = auth
 
-    async def _auth_headers(self) -> dict[str, str]:
-        if self._auth is None:
-            return {}
-        return await self._auth.get_headers()
+    async def _request_headers(self) -> dict[str, str]:
+        headers = {_VERSION_HEADER: _PROTOCOL_VERSION}
+        if self._auth is not None:
+            headers.update(await self._auth.get_headers())
+        return headers
 
     async def close(self) -> None:
         await self._http.aclose()
 
     async def get_agent_card(self) -> dict[str, Any]:
         url = self.server_url.rstrip("/") + self._agent_card_path
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         resp = await self._http.get(url, headers=headers)
         resp.raise_for_status()
         return resp.json()
@@ -118,11 +162,11 @@ class A2AClient:
         payload = {
             "jsonrpc": "2.0",
             "id": next(self._request_id),
-            "method": "message/send",
+            "method": "SendMessage",
             "params": _build_params(text, context_id, task_id),
         }
 
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         resp = await self._http.post(self.server_url, json=payload, headers=headers)
         resp.raise_for_status()
         body = resp.json()
@@ -141,11 +185,11 @@ class A2AClient:
         payload = {
             "jsonrpc": "2.0",
             "id": next(self._request_id),
-            "method": "message/stream",
+            "method": "SendStreamingMessage",
             "params": _build_params(text, context_id, task_id),
         }
 
-        headers = await self._auth_headers()
+        headers = await self._request_headers()
         async with self._http.stream(
             "POST",
             self.server_url,
@@ -154,19 +198,29 @@ class A2AClient:
             timeout=httpx.Timeout(60.0, read=_STREAM_READ_TIMEOUT),
         ) as resp:
             resp.raise_for_status()
+            event_type: str | None = None
             async for line in resp.aiter_lines():
+                if line == "":
+                    event_type = None
+                    continue
+                if line.startswith("event:"):
+                    event_type = line.split(":", 1)[1].strip()
+                    continue
                 if not line.startswith("data: "):
                     continue
                 data = line[6:]
                 if data == "[DONE]":
                     break
                 try:
-                    event = json.loads(data)
+                    body = json.loads(data)
                 except json.JSONDecodeError:
                     logger.warning("malformed SSE data, skipping: %s", data[:200])
                     continue
-                result = event.get("result", {})
-                yield A2AStreamEvent.from_result(result)
+                if event_type == "error":
+                    if "error" in body:
+                        raise A2AError(body["error"])
+                    continue
+                yield A2AStreamEvent.from_result(body.get("result", {}))
 
 
 class A2AStreamEvent:
@@ -188,22 +242,27 @@ class A2AStreamEvent:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AStreamEvent:
-        status = result.get("status", {})
-        is_final = status.get("state") in ("completed", "failed", "canceled")
-
-        text = (
-            _extract_text_from_result(result)
-            if is_final
-            else _extract_artifact_text(result)
+        task = _unwrap_result(result)
+        status = task.get("status", {})
+        is_final = (
+            status.get("state") in _TERMINAL_STATES
+            or "message" in result
+            or task.get(_FINAL_FLAG_KEY) is True
         )
+        force_text = task.get(_FORCE_TEXT_KEY) is True
+
+        if is_final or force_text:
+            text = _extract_text_from_task(task)
+        else:
+            text = _extract_artifact_text(task)
 
         return cls(
             text=text,
             is_final=is_final,
-            context_id=result.get("contextId"),
-            task_id=result.get("id"),
+            context_id=task.get("contextId"),
+            task_id=task.get("id"),
             raw=result,
-            attachments=extract_file_parts(result) if is_final else [],
+            attachments=extract_file_parts(task) if is_final else [],
         )
 
 
@@ -224,14 +283,15 @@ class A2AResponse:
 
     @classmethod
     def from_result(cls, result: dict[str, Any]) -> A2AResponse:
-        text = _extract_text_from_result(result) or "(no response)"
+        task = _unwrap_result(result)
+        text = _extract_text_from_task(task) or "(no response)"
 
         return cls(
             text=text,
-            context_id=result.get("contextId"),
-            task_id=result.get("id"),
+            context_id=task.get("contextId"),
+            task_id=task.get("id"),
             raw=result,
-            attachments=extract_file_parts(result),
+            attachments=extract_file_parts(task),
         )
 
 

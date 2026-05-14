@@ -11,7 +11,7 @@ A gateway that connects any [A2A (Agent-to-Agent)](https://google.github.io/A2A/
     Slack ──┤                        │   Your A2A Agent    │
  WhatsApp ──┤                        │   (ADK, LangGraph,  │
    G Chat ──┼──▶  a2a-gateway  ──A2A─┤    CrewAI, custom…) │
-    Email ──┤  ◀───── /push ─────────┤                     │
+    Email ──┤  ◀──── /push (A2A) ────┤                     │
   Discord ──┤                        └─────────────────────┘
    Custom ──┘
 ```
@@ -56,10 +56,9 @@ cp config.example.yaml config.yaml
 uv run a2a-gateway --config config.yaml
 ```
 
-Or with the built-in test agent (uses Gemini, requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)):
+Or with the built-in test agent (a minimal A2A echo server — no LLM, no credentials needed):
 
 ```bash
-gcloud auth application-default login
 uv run a2a-gateway --with-agent
 ```
 
@@ -107,7 +106,7 @@ Inbound message
 |-------|-------------|
 | [Configuration](docs/configuration.md) | Env vars, config file, A2A auth, default/opt-in features |
 | [Custom channels](docs/custom-channels.md) | Build your own channel adapter with `SimpleChannel` |
-| [Push API](docs/push-api.md) | Send messages to any channel via `POST /push` |
+| [Push API](docs/push-api.md) | Send messages to any channel via the A2A JSON-RPC endpoint at `POST /push` |
 
 ## Docker
 

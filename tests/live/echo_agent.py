@@ -82,10 +82,12 @@ def _build_response(
         "jsonrpc": "2.0",
         "id": request_id,
         "result": {
-            "id": task_id,
-            "contextId": context_id,
-            "status": {"state": "completed"},
-            "artifacts": artifacts,
+            "task": {
+                "id": task_id,
+                "contextId": context_id,
+                "status": {"state": "TASK_STATE_COMPLETED"},
+                "artifacts": artifacts,
+            }
         },
     }
 
@@ -99,40 +101,37 @@ async def handle_jsonrpc(request: Request) -> dict:
 
     user_text = ""
     for part in message.get("parts", []):
-        if part.get("kind") == "text":
-            user_text += part.get("text", "")
+        if "text" in part:
+            user_text += part["text"]
 
     context_id = message.get("contextId") or uuid.uuid4().hex
     cmd = user_text.strip()
 
     if cmd.startswith("/long"):
-        parts: list[dict] = [{"kind": "text", "text": _LONG_TEXT}]
+        parts: list[dict] = [{"text": _LONG_TEXT}]
         return _build_response(request_id, context_id, parts)
 
     if cmd.startswith("/markdown"):
-        parts = [{"kind": "text", "text": _MARKDOWN_TEXT}]
+        parts = [{"text": _MARKDOWN_TEXT}]
         return _build_response(request_id, context_id, parts)
 
     if cmd.startswith("/unicode"):
-        parts = [{"kind": "text", "text": f"ECHO: {_UNICODE_TEXT}"}]
+        parts = [{"text": f"ECHO: {_UNICODE_TEXT}"}]
         return _build_response(request_id, context_id, parts)
 
     if cmd.startswith("/multi"):
-        parts = [{"kind": "text", "text": "ECHO-PART-1: first artifact"}]
-        extra = [{"parts": [{"kind": "text", "text": "ECHO-PART-2: second artifact"}]}]
+        parts = [{"text": "ECHO-PART-1: first artifact"}]
+        extra = [{"parts": [{"text": "ECHO-PART-2: second artifact"}]}]
         return _build_response(request_id, context_id, parts, extra_artifacts=extra)
 
-    parts = [{"kind": "text", "text": f"ECHO: {user_text}"}]
+    parts = [{"text": f"ECHO: {user_text}"}]
 
     if cmd.startswith("/file"):
         parts.append(
             {
-                "kind": "file",
-                "file": {
-                    "name": "test.png",
-                    "mimeType": "image/png",
-                    "bytes": _1X1_PNG,
-                },
+                "filename": "test.png",
+                "mediaType": "image/png",
+                "raw": _1X1_PNG,
             }
         )
 

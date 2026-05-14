@@ -25,8 +25,7 @@ dependencies = [
     "google-api-python-client>=2.160",
     "aiosmtpd>=1.4",
     "pyyaml>=6.0",
-    "google-adk[a2a]>=1.28.1",
-    "a2a-sdk[http-server]==0.3.26",
+    "a2a-sdk[http-server]>=1.0,<2",
     "python-telegram-bot>=21",
     "discord.py>=2.4",
     "uvloop>=0.21; sys_platform != 'win32'",
@@ -58,7 +57,8 @@ dev = [
 [tool.ruff]
 line-length = 90
 target-version = "py312"
-include = ["gateway/**/*.py", "agent/**/*.py", "tests/**/*.py"]
+include = ["gateway/**/*.py", "samples/**/*.py", "tests/**/*.py"]
+exclude = ["samples/adk"]
 
 [tool.ruff.lint]
 preview = true
@@ -82,7 +82,7 @@ ignore = ["E501", "C901", "RUF001", "UP036", "UP047", "RUF067", "RUF069", "RUF02
 "tests/**/*.py" = ["T20"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gateway", "agent"]
+known-first-party = ["gateway", "samples"]
 
 [tool.ruff.lint.pylint]
 max-positional-args = 5
