@@ -15,13 +15,12 @@
 from __future__ import annotations
 
 import importlib
-import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from gateway.config import GatewayConfig
@@ -40,7 +39,6 @@ from gateway.core.health import HealthMonitor
 from gateway.core.policies import GroupMode, GroupPolicyChecker, GroupPolicyConfig
 from gateway.core.rate_limit import BackoffConfig, RateLimitConfig
 from gateway.core.router import Router
-from gateway.core.types import OutboundMessage
 from gateway.core.typing_indicator import TypingIndicator
 
 logger = logging.getLogger(__name__)
@@ -223,6 +221,10 @@ def create_app(
     for adapter in webhook_adapters:
         app.include_router(adapter.router)
 
+    from gateway.core.push_a2a import mount_push_a2a_routes
+
+    mount_push_a2a_routes(app, router)
+
     @app.get("/live")
     async def live() -> dict[str, str]:
         return {"status": "ok"}
@@ -253,72 +255,6 @@ def create_app(
                 "supported_content_types": caps.supported_content_types,
             }
         return base
-
-    @app.post("/push")
-    async def push(request: Request) -> JSONResponse:
-        try:
-            body = json.loads(await request.body())
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JSONResponse(
-                status_code=422,
-                content={"error": "invalid JSON body"},
-            )
-
-        if not isinstance(body, dict):
-            return JSONResponse(
-                status_code=422,
-                content={"error": "request body must be a JSON object"},
-            )
-
-        channel = body.get("channel")
-        recipient_id = body.get("recipient_id")
-        text = body.get("text")
-
-        if (
-            not isinstance(channel, str)
-            or not isinstance(recipient_id, str)
-            or not isinstance(text, str)
-            or not channel
-            or not recipient_id
-            or not text
-        ):
-            return JSONResponse(
-                status_code=422,
-                content={
-                    "error": (
-                        "channel, recipient_id, and text are required non-empty strings"
-                    )
-                },
-            )
-
-        adapter = router.channels.get(channel)
-        if not adapter:
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "error": f"channel {channel!r} not found",
-                    "available": list(router.channels.keys()),
-                },
-            )
-
-        msg = OutboundMessage(
-            channel=channel,
-            recipient_id=recipient_id,
-            text=text,
-            thread_id=body.get("thread_id"),
-            conversation_id=body.get("conversation_id"),
-        )
-        try:
-            message_id = await adapter.send(msg)
-        except Exception:
-            logger.exception("push send failed on channel %s", channel)
-            return JSONResponse(
-                status_code=502,
-                content={"error": "adapter send failed"},
-            )
-        return JSONResponse(
-            content={"status": "sent", "message_id": message_id},
-        )
 
     return app
 
