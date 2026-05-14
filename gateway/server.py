@@ -37,6 +37,7 @@ from gateway.core.concurrency import ConcurrencyLimiter
 from gateway.core.debounce import DebounceConfig
 from gateway.core.health import HealthMonitor
 from gateway.core.policies import GroupMode, GroupPolicyChecker, GroupPolicyConfig
+from gateway.core.push_a2a import mount_push_a2a_routes
 from gateway.core.rate_limit import BackoffConfig, RateLimitConfig
 from gateway.core.router import Router
 from gateway.core.typing_indicator import TypingIndicator
@@ -220,8 +221,6 @@ def create_app(
 
     for adapter in webhook_adapters:
         app.include_router(adapter.router)
-
-    from gateway.core.push_a2a import mount_push_a2a_routes
 
     mount_push_a2a_routes(app, router)
 

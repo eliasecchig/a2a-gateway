@@ -78,7 +78,7 @@ The reply's `metadata.gateway/message_id` carries the adapter's returned message
 
 Common causes: missing or invalid routing metadata, unknown channel, adapter send failed. The exact `code` follows JSON-RPC convention; assert on `error.message` substring rather than `code` for stable error handling.
 
-The message bypasses the upstream A2A agent and goes directly to the channel adapter. Channel-side [rate limiting](configuration.md#default-features) applies.
+The message bypasses the router pipeline and goes directly to the channel adapter — debouncing, channel rate limiting, and concurrency limits do not apply.
 
 > **Authentication:** The push endpoint has no built-in authentication. In production, protect it with a reverse proxy, network policy, or API gateway.
 
