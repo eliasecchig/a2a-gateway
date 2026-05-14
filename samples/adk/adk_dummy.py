@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 agent = Agent(
-    model="gemini-2.0-flash",
+    model="gemini-flash-latest",
     name="adk_dummy_agent",
     description="ADK-based dummy agent (a2a-sdk 0.3) for backward-compat testing.",
     instruction=(
